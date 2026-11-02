@@ -1,6 +1,7 @@
 // Офлайн-режим. Код приложения: сначала сеть (обновления приходят сразу), без сети — кэш.
+// cache: 'no-cache' — браузер сверяется с сайтом каждый раз, а не берёт файл из своего кэша на 10 минут.
 // Движок и фигуры не меняются: сначала кэш, чтобы 7 МБ не качались каждый раз.
-const CACHE = 'chess-v2';
+const CACHE = 'chess-v3';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/main.js', 'js/ui.js', 'js/board.js', 'js/chess.js', 'js/pgn.js', 'js/engine.js', 'js/review.js',
@@ -14,7 +15,7 @@ const STATIC = ['engine/stockfish-18-lite-single.js', 'engine/stockfish-18-lite-
 const IMMUTABLE = /\/(engine|pieces)\//;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'no-cache' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -39,7 +40,7 @@ self.addEventListener('fetch', (e) => {
     })));
     return;
   }
-  e.respondWith(fetch(req).then((res) => {
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req, { ignoreSearch: true }).then((hit) => hit || caches.match('index.html'))));
