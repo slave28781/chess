@@ -1,0 +1,10 @@
+{
+  "name": "chess",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "description": "Шахматы с разбором партий на Stockfish. Без зависимостей и сборки.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
