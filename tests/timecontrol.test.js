@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatClock, engineBudget, animationMs, flagResult, canMate, timeControl, tcLabel, isLowTime, TIME_CONTROLS } from '../app/js/timecontrol.js';
+import { formatClock, engineBudget, animationMs, flagResult, canMate, timeControl, tcLabel, isLowTime, TIME_CONTROLS, humanThinkMs } from '../app/js/timecontrol.js';
 
 test('часы: формат', () => {
   assert.equal(formatClock(300000), '5:00');
@@ -48,4 +48,21 @@ test('проигрыш по времени и ничья, если соперн�
   assert.ok(!canMate(loneKnight, 'b'));
   assert.deepEqual(flagResult(loneKnight, 'w'), { result: '1/2-1/2', reason: 'timeout-draw' });
   assert.deepEqual(flagResult(loneKnight, 'b'), { result: '1-0', reason: 'timeout' });
+});
+
+test('бот тратит время как человек, а не по полсекунды', () => {
+  const mid = () => 0.5; // без случайности
+  // 10 минут на часах, середина партии: ~20 секунд на ход
+  assert.equal(humanThinkMs({ remainingMs: 600000, ply: 30, random: mid }), 20000);
+  // в дебюте втрое быстрее
+  assert.equal(humanThinkMs({ remainingMs: 600000, ply: 4, random: mid }), 6000);
+  // вынужденный ход — почти сразу
+  assert.ok(humanThinkMs({ remainingMs: 600000, ply: 30, legalMoves: 1, random: mid }) < 1000);
+  // мало времени — быстро, но не больше 12% остатка
+  assert.ok(humanThinkMs({ remainingMs: 8000, ply: 50, random: () => 1 }) <= 960);
+  // за партию 10+0 (40 ходов) бот тратит заметную часть времени, но не всё
+  let left = 600000;
+  for (let ply = 1; ply < 80; ply += 2) left -= humanThinkMs({ remainingMs: left, ply, random: mid });
+  const spent = 600000 - left;
+  assert.ok(spent > 240000 && spent < 520000, `потрачено ${Math.round(spent / 1000)} с`);
 });

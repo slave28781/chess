@@ -17,7 +17,7 @@ export function mountGames(root, { go }) {
   function render() {
     root.innerHTML = '';
     const list = games.list();
-    root.append(h('button', { class: 'btn btn-primary btn-block', onclick: () => go('analysis') }, icon('plus'), 'Добавить партию'));
+    root.append(h('button', { class: 'btn btn-primary btn-block', onclick: () => go('analysis', { load: true }) }, icon('plus'), 'Добавить партию'));
     if (!list.length) {
       root.append(h('div', { class: 'card empty' },
         h('div', { html: ART }),

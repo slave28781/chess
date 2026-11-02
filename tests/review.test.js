@@ -6,7 +6,7 @@ import {
   winPercent, winFor, moveAccuracy, formatScore, toWhitePov, mateFor,
   classifyGame, findSacrifice, terminalEval, extractPuzzles, uciLineToSan,
 } from '../app/js/review.js';
-import { moveComment } from '../app/js/comments.js';
+import { moveComment, lineGain, findFork, whatMove, evalWords, gameSummary, materialWord } from '../app/js/comments.js';
 import { openingInfo, OPENING_LINES } from '../app/js/openings.js';
 import { sanToRu } from '../app/js/notation.js';
 
@@ -73,9 +73,9 @@ test('детский мат: теория, зевок с комментарие�
   assert.deepEqual(r.moves.map((m) => m.cls), ['book', 'book', 'book', 'excellent', 'good', 'blunder', 'best']);
   assert.equal(r.opening, 'Дебют слона');
   assert.equal(r.moves[0].opening, 'Дебют королевской пешки');
-  assert.equal(moveComment(r.moves[5]), 'Зевок! Теперь у соперника мат в 1 ход: Qxf7#. Нужно было g6.');
-  assert.equal(moveComment(r.moves[5], sanToRu), 'Зевок! Теперь у соперника мат в 1 ход: Фxf7#. Нужно было g6.');
-  assert.equal(moveComment(r.moves[0]), 'Теория: Дебют королевской пешки.');
+  assert.equal(moveComment(r.moves[5]), 'Зевок! Теперь у соперника мат в 1 ход: Qxf7#. Нужно было g6 — держало равенство.');
+  assert.equal(moveComment(r.moves[5], sanToRu), 'Зевок! Теперь у соперника мат в 1 ход: Фxf7#. Нужно было g6 — держало равенство.');
+  assert.equal(moveComment(r.moves[0]), 'Теория: Дебют королевской пешки. Борется за центр.');
   assert.equal(r.summary.w.counts.best, 1);
   assert.equal(r.summary.b.counts.blunder, 1);
   assert.ok(r.summary.w.accuracy > r.summary.b.accuracy, 'у белых точность выше');
@@ -128,7 +128,7 @@ test('упущение: соперник зевнул, а ответная ош�
   const evals = [ev('d2d3', 20), ev('g8f6', 20), ev('c4f7', 400), ev('g8f6', 30)];
   const r = classifyGame(g, evals);
   assert.deepEqual(r.moves.map((m) => m.cls), ['best', 'blunder', 'miss']);
-  assert.match(moveComment(r.moves[2]), /^Упущение: соперник ошибся, но шанс не использован\. Сильнее было Bxf7\+/);
+  assert.match(moveComment(r.moves[2]), /^Упущенная возможность: соперник ошибся, но шанс не использован\. Сильнее было Bxf7\+/);
 });
 
 test('вынужденный ход и потеря фигуры в комментарии', () => {
@@ -144,7 +144,7 @@ test('вынужденный ход и потеря фигуры в коммен
   const res = classifyGame(h, evals);
   assert.equal(res.moves[0].cls, 'blunder');
   assert.equal(res.moves[0].lostPiece, null);
-  assert.equal(moveComment(res.moves[0]), 'Зевок! Оценка: 0.0 → +5.2. Нужно было Ra1.');
+  assert.equal(moveComment(res.moves[0]), 'Зевок! Оценка: 0.0 → +5.2. Нужно было Ra1 — держало равенство.');
 });
 
 test('комментарий «теряется фигура», когда ответ соперника её берёт', () => {
@@ -154,8 +154,8 @@ test('комментарий «теряется фигура», когда от�
   const r = classifyGame(g, evals);
   assert.equal(r.moves[0].cls, 'blunder');
   assert.deepEqual(r.moves[0].lostPiece, { type: 'q', square: 'h4' });
-  assert.equal(moveComment(r.moves[0]), 'Зевок! Теряется ферзь: Nxh4. Нужно было Nf6.');
-  assert.equal(moveComment(r.moves[0], (x) => x.replace(/^N/, 'К')), 'Зевок! Теряется ферзь: Кxh4. Нужно было Кf6.');
+  assert.equal(moveComment(r.moves[0]), 'Зевок! Теряется ферзь: Nxh4. Нужно было Nf6 — держало равенство.');
+  assert.equal(moveComment(r.moves[0], (x) => x.replace(/^N/, 'К')), 'Зевок! Теряется ферзь: Кxh4. Нужно было Кf6 — держало равенство.');
 });
 
 test('русская нотация и линии в SAN', () => {
@@ -165,4 +165,47 @@ test('русская нотация и линии в SAN', () => {
   assert.equal(sanToRu('O-O-O'), '0-0-0');
   assert.equal(sanToRu('Bb5'), 'Сb5');
   assert.deepEqual(uciLineToSan(new Chess().fen(), ['e2e4', 'e7e5', 'g1f3', 'zz', 'b8c6']), ['e4', 'e5', 'Nf3']);
+});
+
+test('комментарии: вилка конём', () => {
+  // Чёрные сыграли 1...h6?? и пропустили Nc7+ — вилка на короля и ладью.
+  const g = gameOf(['h6'], 'r3k3/7p/8/1N6/8/8/8/4K3 b - - 0 1');
+  const evals = [ev('e8d7', 0), { bestMove: 'b5c7', score: { cp: 500 }, lines: [{ move: 'b5c7', score: { cp: 500 }, pv: ['b5c7', 'e8d7', 'c7a8'] }] }];
+  const r = classifyGame(g, evals).moves[0];
+  assert.equal(r.cls, 'blunder');
+  assert.match(moveComment(r), /^Зевок! Соперник ставит вилку: Nc7\+ — конь нападает на короля и ладью\./);
+  assert.deepEqual(findFork('r3k3/2N5/7p/8/8/8/8/4K3 b - - 1 2', 'c7'), { piece: 'n', targets: ['k', 'r'] });
+  assert.equal(findFork('r3k3/8/7p/1N6/8/8/8/4K3 w - - 1 2', 'b5'), null);
+});
+
+test('комментарии: выигрыш материала по линии и «что делает ход»', () => {
+  const start = new Chess().fen();
+  assert.equal(lineGain(start, ['e2e4', 'd7d5', 'e4d5'], 'w'), 0, 'пешку забрали, но ферзь d8 её отыгрывает');
+  assert.equal(lineGain('4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1', ['e4d5'], 'w'), 1, 'забрали пешку, отыграть нечем');
+  assert.equal(lineGain('4k3/8/3p4/4n3/8/8/1B6/4K3 w - - 0 1', ['b2e5'], 'w'), 0, 'слон за коня, пешка отбирает: размен');
+  assert.equal(lineGain('4k3/8/3p4/4p3/8/8/7Q/4K3 w - - 0 1', ['h2e5'], 'w'), -8, 'ферзь за пешку');
+  assert.equal(materialWord(1), 'пешку');
+  assert.equal(materialWord(3), 'фигуру');
+  assert.equal(materialWord(9), 'ферзя');
+  const mk = (fen, uci, extra = {}) => ({ fenBefore: fen, uci, ply: 3, ...extra });
+  assert.equal(whatMove(mk(start, 'e2e4', { ply: 0 })), 'Борется за центр.');
+  assert.equal(whatMove(mk(start, 'g1f3', { ply: 0 })), 'Развивает фигуру.');
+  assert.equal(whatMove(mk('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1', 'e1g1', { ply: 30 })), 'Рокировка — король уходит в безопасное место.');
+  assert.equal(whatMove(mk('6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', 'a1a8')), 'Мат!');
+  assert.equal(whatMove(mk('4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1', 'e4d5', { ply: 30 })), 'Забирает пешку.');
+  assert.equal(whatMove(mk('4k3/8/8/3P4/8/8/8/4K3 b - - 0 1', 'e8d7', { ply: 30 })), '');
+  assert.equal(evalWords({ cp: 20 }), 'Позиция примерно равная.');
+  assert.equal(evalWords({ cp: -180 }), 'У чёрных заметный перевес.');
+  assert.equal(evalWords({ mate: 3 }), 'У белых форсированный мат.');
+});
+
+test('итоги партии: точность, ошибки, перелом', () => {
+  const g = gameOf(['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#']);
+  const evals = [ev('e2e4', 30), ev('e7e5', 30), ev('g1f3', 30), ev('g8f6', 20), ev('g1f3', 30),
+    ev('g7g6', 0, [{ move: 'd8e7', score: { cp: 20 }, pv: ['d8e7'] }]), ev('h5f7', { mate: 1 }), terminalEval(g.fens[7])];
+  const lines = gameSummary(classifyGame(g, evals), { w: 'Вы', b: 'Конь' });
+  assert.equal(lines[0], 'Дебют: Дебют слона.');
+  assert.match(lines[1], /^Вы: точность \d+\.\d%, без ошибок\.$/);
+  assert.match(lines[2], /^Конь: точность \d+\.\d%, 1 зевок\.$/);
+  assert.equal(lines[3], 'Перелом: 3… Nf6?? — после него у белых форсированный мат.');
 });
