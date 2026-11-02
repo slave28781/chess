@@ -131,5 +131,20 @@ go(location.hash.slice(1) || 'play');
 setTimeout(() => { getEngine().catch(() => {}); }, 800);
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // Вышла новая версия — один раз перезагрузиться, чтобы сразу её показать.
+  // Первая установка — не повод перезагружаться; последующие смены версии — повод.
+  let hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) { hadController = true; return; }
+    if (reloaded) return;
+    reloaded = true;
+    location.reload();
+  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+      // При возвращении в приложение проверяем, нет ли обновления.
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
+  });
 }
