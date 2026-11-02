@@ -118,7 +118,9 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
 .m-last { background: var(--last-move); }
 .m-last.to { box-shadow: inset 0 0 0 3px rgba(255, 220, 0, 0.55); }
 .m-sel { background: rgba(20, 85, 30, 0.5); }
-.m-over { box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.65); }
+.m-over { background: rgba(255, 255, 255, 0.3); box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.9); z-index: 1; }
+/* Большой круг вокруг клетки под пальцем — видно, даже когда палец её закрывает. */
+.m-over::before { content: ''; position: absolute; inset: -60%; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
 .m-hint { background: rgba(91, 139, 217, 0.55); animation: pulse 1.2s ease-in-out infinite; }
 .m-dot::after { content: ''; position: absolute; inset: 36%; border-radius: 50%; background: rgba(0, 0, 0, 0.2); }
 .m-cap::after { content: ''; position: absolute; inset: 3%; border-radius: 50%; border: 5px solid rgba(0, 0, 0, 0.2); }
@@ -201,6 +203,7 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
 .mc-head { display: flex; align-items: center; gap: 10px; }
 .cls-icon { width: 30px; height: 30px; display: inline-grid; flex: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.35)); }
 .cls-icon svg { width: 100%; height: 100%; display: block; }
+.sf-badge { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #3b4a6b; color: #fff; font-weight: 800; font-size: 12px; }
 .cls-icon.sm { width: 22px; height: 22px; }
 .cls-icon.xs { width: 17px; height: 17px; }
 .mc-title { font-weight: 750; font-size: 17px; }

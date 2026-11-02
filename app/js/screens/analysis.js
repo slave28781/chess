@@ -444,7 +444,7 @@ export function mountAnalysis(root, { go, params = {} }) {
 
   function liveCard() {
     const card = h('div', { class: 'move-card' });
-    const head = h('div', { class: 'mc-head' }, h('span', { class: 'cls-icon', style: { background: '#3b4a6b' } }, 'SF'),
+    const head = h('div', { class: 'mc-head' }, h('span', { class: 'sf-badge' }, 'SF'),
       h('div', { class: 'grow' }, h('div', { class: 'mc-title' }, 'Stockfish 18'), h('div', { class: 'mc-move', 'data-live': 'depth' }, 'анализ…')),
       h('div', { class: 'mc-eval', 'data-live': 'eval' }, '…'));
     els.engineLine = h('div', { class: 'engine-line', 'data-live': 'line' }, '');

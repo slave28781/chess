@@ -314,7 +314,7 @@ export class Board {
     const p = this._pieceAt(sq);
     if (!p) return;
     e.preventDefault();
-    this.root.setPointerCapture?.(e.pointerId);
+    try { this.root.setPointerCapture(e.pointerId); } catch { /* не страшно */ }
     this.drag = { from: sq, piece: p, x0: e.clientX, y0: e.clientY, moved: false, wasSelected, over: null };
   }
 
@@ -325,12 +325,15 @@ export class Board {
     d.moved = true;
     const rect = this.root.getBoundingClientRect();
     const size = rect.width / 8;
+    // Фигура — по центру пальца и крупнее, чтобы её было видно вокруг пальца.
+    const touch = e.pointerType === 'touch';
     const px = e.clientX - rect.left - size / 2;
-    const py = e.clientY - rect.top - size / 2 - (e.pointerType === 'touch' ? size * 0.35 : 0);
+    const py = e.clientY - rect.top - size / 2;
     d.piece.el.classList.add('dragging');
     d.piece.el.style.transition = 'none';
-    d.piece.el.style.transform = `translate(${px}px, ${py}px) scale(1.15)`;
-    const over = this._sqAt(e.clientX, e.clientY - (e.pointerType === 'touch' ? size * 0.35 : 0));
+    d.piece.el.style.transform = `translate(${px}px, ${py}px) scale(${touch ? 1.6 : 1.15})`;
+    // Ход идёт на клетку прямо под пальцем — без сдвигов.
+    const over = this._sqAt(e.clientX, e.clientY);
     if (over !== d.over) { d.over = over; this._renderMarks(); }
   }
 
@@ -343,8 +346,7 @@ export class Board {
       if (d.wasSelected) this._deselect();
       return;
     }
-    const size = this.root.getBoundingClientRect().width / 8;
-    const sq = this._sqAt(e.clientX, e.clientY - (e.pointerType === 'touch' ? size * 0.35 : 0));
+    const sq = this._sqAt(e.clientX, e.clientY);
     d.piece.el.classList.remove('dragging');
     d.piece.el.style.transition = '';
     if (sq && sq !== d.from && this.targets.some((t) => t.to === sq)) {
