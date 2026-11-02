@@ -166,6 +166,10 @@ export function classifyGame(game, evals) {
       bestSan: before.bestMove ? uciLineToSan(fens[i], [before.bestMove], 1)[0] : null,
       bestLine: before.lines[0] ? uciLineToSan(fens[i], before.lines[0].pv, 6) : [],
       replyLine: after.lines && after.lines[0] ? uciLineToSan(fens[i + 1], after.lines[0].pv, 6) : [],
+      bestPv: before.lines[0] ? before.lines[0].pv : (before.bestMove ? [before.bestMove] : []),
+      replyPv: after.lines && after.lines[0] ? after.lines[0].pv : [],
+      prevUci: i > 0 ? game.moves[i - 1].uci : null,
+      prevSan: i > 0 ? game.moves[i - 1].san : null,
       cls: null,
     };
 

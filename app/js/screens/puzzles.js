@@ -40,7 +40,7 @@ export function mountPuzzles(root, { go }) {
         h('h2', {}, 'Задач пока нет'),
         h('p', {}, 'Сыграйте с движком или вставьте свою партию — после разбора каждая ваша ошибка станет задачей «найди ход лучше».'),
         h('button', { class: 'btn btn-primary btn-block', onclick: () => go('play') }, icon('play'), 'Сыграть с Stockfish'),
-        h('button', { class: 'btn btn-block', onclick: () => go('analysis') }, icon('analysis'), 'Разобрать свою партию')));
+        h('button', { class: 'btn btn-block', onclick: () => go('analysis', { load: true }) }, icon('analysis'), 'Разобрать свою партию')));
       return;
     }
     if (!p) p = puzzles.next();

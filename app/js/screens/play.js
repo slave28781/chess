@@ -5,7 +5,7 @@ import { LEVELS, chooseMove } from '../engine.js';
 import { writePgn } from '../pgn.js';
 import { settings, currentPlay, games, uid, profile as profileStore } from '../store.js';
 import { OPPONENTS, isOpponentUnlocked, unlockText, applyGameResult } from '../progress.js';
-import { TIME_CONTROLS, CATEGORIES, timeControl, tcLabel, formatClock, isLowTime, engineBudget, animationMs, flagResult } from '../timecontrol.js';
+import { TIME_CONTROLS, CATEGORIES, timeControl, tcLabel, formatClock, isLowTime, engineBudget, animationMs, flagResult, humanThinkMs } from '../timecontrol.js';
 import { playSound, soundForMove } from '../sound.js';
 import {
   h, append, icon, fmt, toast, openSheet, segmented, switchEl, getEngine, resultText, capturedInfo, pgnDate, confirmSheet, oppAvatar, oppPieceUrl, celebrate,
@@ -19,6 +19,7 @@ export function mountPlay(root, { go, params = {} }) {
   let destroyed = false;
   let since = null;      // когда пошли текущие часы (Date.now), null — часы стоят
   let ticker = null;
+  let lowWarned = false;
   const clockEls = { w: null, b: null };
 
   const board = new Board(h('div'), { onMove: (m, o) => userMove(m, o) });
@@ -81,7 +82,9 @@ export function mountPlay(root, { go, params = {} }) {
       const ms = remaining(c);
       el.textContent = formatClock(ms);
       el.classList.toggle('on', !state.result && state.clock.running === c && !!since);
-      el.classList.toggle('low', isLowTime(ms, tc().base));
+      const low = isLowTime(ms, tc().base);
+      el.classList.toggle('low', low);
+      if (low && c === state.color && state.clock.running === c && !lowWarned) { lowWarned = true; playSound('lowtime'); }
     }
   }
 
@@ -235,10 +238,13 @@ export function mountPlay(root, { go, params = {} }) {
     try {
       const engine = await getEngine();
       const lv = level();
+      // Сила — по уровню (поиск не дольше, чем положено уровню), а время на часах — как у человека.
+      const think = hasClock()
+        ? humanThinkMs({ remainingMs: remaining(sfColor()), incSec: tc().inc, ply: state.moves.length, legalMoves: chess.movesCount() })
+        : 450;
       const budget = hasClock() ? engineBudget(remaining(sfColor()), tc().inc, lv.movetime || 1000) : null;
-      const uci = await chooseMove(engine, chess.fen(), lv, Math.random, budget);
-      const minDelay = tc().cat === 'bullet' ? 60 : tc().cat === 'blitz' ? 200 : 450;
-      await new Promise((r) => setTimeout(r, Math.max(0, minDelay - (Date.now() - started))));
+      const uci = await chooseMove(engine, chess.fen(), lv, Math.random, budget ? Math.min(budget, think) : null);
+      await new Promise((r) => setTimeout(r, Math.max(0, think - (Date.now() - started))));
       if (my !== token || destroyed || state.result) return;
       thinking = false;
       applyMove(uci, true);
@@ -441,10 +447,12 @@ export function mountPlay(root, { go, params = {} }) {
       color, level: levelId, tc: tcId, rated, startFen: START_FEN, moves: [], result: null, reason: null, created: Date.now(), gameId: null,
       clock: { w: t.base * 1000, b: t.base * 1000, running: null, started: false }, ratingApplied: false,
     };
+    lowWarned = false;
     save();
     load();
     board.setOrientation(color);
     render(false);
+    playSound('start');
     try { (await getEngine()).newGame(); } catch (e) { toast(e.message || 'Движок не запустился'); }
     if (color === 'b') engineMove();
   }

@@ -602,6 +602,22 @@ export class Chess {
     return res;
   }
 
+  // Поля, которые бьёт фигура на square (независимо от очереди хода).
+  attacksFrom(square) {
+    const sq = sqIndex(square), b = this._board, p = b[sq];
+    if (!p) return [];
+    const t = p & 7, res = [];
+    const add = (s) => { if (!(s & 0x88)) res.push(sqName(s)); };
+    if (t === PAWN) { for (const o of p & WHITE ? [15, 17] : [-15, -17]) add(sq + o); }
+    else if (t === KNIGHT || t === KING) { for (const o of t === KNIGHT ? KNIGHT_OFF : KING_OFF) add(sq + o); }
+    else {
+      for (const d of t === BISHOP ? BISHOP_DIR : t === ROOK ? ROOK_DIR : KING_OFF) {
+        for (let s = sq + d; !(s & 0x88); s += d) { res.push(sqName(s)); if (b[s]) break; }
+      }
+    }
+    return res;
+  }
+
   material(color) {
     let sum = 0;
     for (const p of this.pieces()) if (p.color === color && p.type !== 'k') sum += PIECE_VALUES[p.type];

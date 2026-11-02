@@ -78,3 +78,20 @@ export function flagResult(fen, flagged) {
   if (!canMate(fen, opp)) return { result: '1/2-1/2', reason: 'timeout-draw' };
   return { result: flagged === 'w' ? '0-1' : '1-0', reason: 'timeout' };
 }
+
+/**
+ * Сколько бот «думает» над ходом при игре на время — как человек, а не 0.5 с на каждый ход.
+ * Около 1/30 оставшегося времени плюс добавка; в дебюте втрое быстрее; вынужденный ход — почти сразу;
+ * случайный разброс ±40%. Никогда не больше 12% оставшегося времени.
+ * remainingMs — время на часах бота, ply — номер полухода (0 — первый ход партии), legalMoves — сколько ходов есть.
+ */
+export function humanThinkMs({ remainingMs, incSec = 0, ply = 20, legalMoves = 20, random = Math.random }) {
+  if (remainingMs <= 0) return 0;
+  const floor = remainingMs < 20000 ? 120 : 300;
+  if (legalMoves <= 1) return Math.min(floor + 300 * random(), remainingMs * 0.05);
+  let t = remainingMs / 30 + incSec * 1000 * 0.9;
+  if (ply < 10) t *= 0.3;
+  else if (ply < 20) t *= 0.65;
+  t *= 0.6 + 0.8 * random();
+  return Math.round(Math.max(floor, Math.min(t, remainingMs * 0.12)));
+}

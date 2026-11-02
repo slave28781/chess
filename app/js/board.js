@@ -238,11 +238,31 @@ export class Board {
     const [x, y] = this._xy(b.square);
     this.badgeEl.innerHTML = b.html;
     this.badgeEl.title = b.title || '';
-    this.badgeEl.style.left = `calc(${(x + 1) * 12.5}% - 4.6%)`;
-    this.badgeEl.style.top = `calc(${y * 12.5}% - 1.6%)`;
+    this.badgeEl.style.left = `calc(${(x + 1) * 12.5}% - 3.9%)`;
+    this.badgeEl.style.top = `calc(${y * 12.5}% - 1.3%)`;
     this.badgeEl.classList.remove('pop');
     void this.badgeEl.offsetWidth;
     this.badgeEl.classList.add('pop');
+  }
+
+  // ---------- Эффект блестящего хода: вспышка, кольцо, искры, свечение фигуры ----------
+  flash(square, color) {
+    const [x, y] = this._xy(square);
+    const el = document.createElement('div');
+    el.className = 'b-flash';
+    el.style.transform = `translate(${x * 100}%, ${y * 100}%)`;
+    el.style.setProperty('--fc', color);
+    el.innerHTML = '<i></i>'.repeat(10);
+    this.root.appendChild(el);
+    const p = this._pieceAt(square);
+    if (p) {
+      p.el.style.setProperty('--glow', color);
+      p.el.classList.remove('glow');
+      void p.el.offsetWidth;
+      p.el.classList.add('glow');
+      setTimeout(() => p.el.classList.remove('glow'), 1400);
+    }
+    setTimeout(() => el.remove(), 1400);
   }
 
   // ---------- Стрелки ----------

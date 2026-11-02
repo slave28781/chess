@@ -3,7 +3,7 @@ import { Chess, START_FEN } from '../chess.js';
 import { Board } from '../board.js';
 import { parsePgn, writePgn } from '../pgn.js';
 import { reviewGame, classifyGame, extractPuzzles, toWhitePov, formatScore, winPercent, CLASSES, CLASS_ORDER, CLASS_NAG, uciLineToSan, terminalEval } from '../review.js';
-import { moveComment } from '../comments.js';
+import { moveComment, gameSummary } from '../comments.js';
 import { classIconSvg } from '../icons.js';
 import { settings, games, puzzles, uid, profile as profileStore } from '../store.js';
 import { applyReview } from '../progress.js';
@@ -37,6 +37,8 @@ export function mountAnalysis(root, { go, params = {} }) {
   let live = { token: 0, running: false, lines: null, fen: null };
   let destroyed = false;
   let noteTimer = null;
+  let fxToken = 0;
+  let shownPly = null;
 
   const board = new Board(h('div'), { onMove: (m, o) => boardMove(m, o) });
   const evalBar = new EvalBar();
@@ -73,8 +75,8 @@ export function mountAnalysis(root, { go, params = {} }) {
     let raf = 0;
     try {
       await engine.analyse(live.fen, {
-        depth: 20,
-        multipv: 1,
+        depth: 22,
+        multipv: 3,
         onInfo: (lines) => {
           if (my !== live.token) return;
           live.lines = lines.map((l) => ({ ...l, score: toWhitePov(l.score, turn) }));
@@ -133,13 +135,16 @@ export function mountAnalysis(root, { go, params = {} }) {
     }
     const c = chessAt();
     const last = c.history().at(-1);
-    if (last && where === 'next') playSound(soundForMove(last, c));
+    if (last) playSound(soundForMove(last, c));
     render();
   }
 
   function goPly(p, { scrollToBoard = false } = {}) {
     variation = null;
     ply = p;
+    const c = chessAt();
+    const last = c.history().at(-1);
+    if (last) playSound(soundForMove(last, c));
     render();
     if (scrollToBoard) {
       const top = board.root.getBoundingClientRect().top + window.scrollY - 76;
@@ -280,12 +285,11 @@ export function mountAnalysis(root, { go, params = {} }) {
   // ---------- Отрисовка ----------
   let els = {};
 
-  function renderInput() {
-    root.innerHTML = '';
+  function openLoadSheet() {
     let myColor = settings.get().myColor || 'w';
     const ta = h('textarea', { placeholder: 'Вставьте PGN партии (chess.com, lichess) или FEN позиции', 'aria-label': 'PGN или FEN', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off' });
-    root.append(
-      h('div', { class: 'card stack' },
+    openSheet((sheet, close) => sheet.append(
+      h('div', { class: 'stack' },
         h('h2', {}, 'Разбор партии'),
         h('p', { style: { margin: 0 } }, 'Stockfish 18 оценит каждый ход: от 💎 бриллиантовых до ?? зевков, посчитает точность и объяснит ошибки.'),
         ta,
@@ -296,17 +300,14 @@ export function mountAnalysis(root, { go, params = {} }) {
           }, icon('paste'), 'Вставить'),
           h('button', { class: 'btn btn-sm grow', onclick: () => { ta.value = EXAMPLE; myColor = 'w'; } }, 'Пример: Морфи, 1858')),
         h('div', {}, h('div', { class: 'label' }, 'Я играл'), segmented([['w', 'Белыми'], ['b', 'Чёрными'], ['none', 'Не я']], myColor, (v) => { myColor = v; if (v !== 'none') settings.set({ myColor: v }); })),
-        h('button', { class: 'btn btn-primary btn-block', onclick: () => submitText(ta.value, myColor) }, icon('analysis'), 'Разобрать')),
-      h('div', { class: 'card stack' },
-        h('h2', {}, 'Свободный анализ'),
-        h('p', { style: { margin: 0 } }, 'Ставьте ходы сами — движок сразу покажет оценку и лучшее продолжение.'),
-        h('button', { class: 'btn btn-block', onclick: () => openFree(START_FEN) }, icon('board'), 'Открыть доску')),
-    );
+        h('button', { class: 'btn btn-primary btn-block', onclick: () => { close(); submitText(ta.value, myColor); } }, icon('analysis'), 'Разобрать'),
+        h('button', { class: 'btn btn-ghost btn-block', onclick: () => { close(); go('games'); } }, 'Выбрать из моих партий')),
+    ));
   }
 
   function render({ animate = true } = {}) {
     if (destroyed) return;
-    if (!record) { renderInput(); return; }
+    if (!record) { openFree(START_FEN); return; }
     const f = fmt();
     const c = chessAt();
     const keepY = window.scrollY;
@@ -321,7 +322,19 @@ export function mountAnalysis(root, { go, params = {} }) {
     board.setInteractive(reviewing ? null : 'both');
     board.setCoords(settings.get().coords);
     const r = !variation && data && ply >= 0 ? data.moves[ply] : null;
-    board.setBadge(r ? { square: r.uci.slice(2, 4), html: classIconSvg(r.cls), title: CLASSES[r.cls].label } : null);
+    const badge = r ? { square: r.uci.slice(2, 4), html: classIconSvg(r.cls), title: CLASSES[r.cls].label } : null;
+    const fx = ++fxToken;
+    const shine = r && animate && shownPly !== ply && (r.cls === 'brilliant' || r.cls === 'great');
+    shownPly = variation ? null : ply;
+    if (shine) {
+      // Сначала фигура встаёт на место, потом вспышка и звук, и только потом — значок.
+      board.setBadge(null);
+      const ms = board.animMs || 0;
+      setTimeout(() => { if (fx !== fxToken || destroyed) return; board.flash(badge.square, CLASSES[r.cls].color); playSound(r.cls); }, ms + 40);
+      setTimeout(() => { if (fx !== fxToken || destroyed) return; board.setBadge(badge); }, ms + 520);
+    } else {
+      board.setBadge(badge);
+    }
     const arrows = [];
     if (r && r.bestMove && !['best', 'brilliant', 'great', 'book', 'forced', 'excellent'].includes(r.cls)) {
       arrows.push({ from: r.bestMove.slice(0, 2), to: r.bestMove.slice(2, 4), color: '#81b64c', opacity: 0.9 });
@@ -398,8 +411,9 @@ export function mountAnalysis(root, { go, params = {} }) {
     if (opening) card.append(h('div', { class: 'opening' }, opening));
     if (record.source === 'free') {
       card.innerHTML = '';
-      card.append(h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { style: { fontWeight: 700 } }, 'Свободный анализ'), h('div', { class: 'muted small' }, 'Ходите за обе стороны')),
-        h('button', { class: 'btn btn-sm', onclick: () => { record = null; render(); } }, 'Закрыть')));
+      card.append(h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { style: { fontWeight: 700 } }, 'Анализ с движком'), h('div', { class: 'muted small' }, 'Ходите за обе стороны, Stockfish считает в фоне')),
+        record.moves.length ? h('button', { class: 'btn btn-sm', onclick: () => openFree(START_FEN) }, 'Сброс') : null,
+        h('button', { class: 'btn btn-sm btn-primary', onclick: openLoadSheet }, 'Партия')));
     }
     return card;
   }
@@ -414,9 +428,12 @@ export function mountAnalysis(root, { go, params = {} }) {
     const f = fmt();
     const card = h('div', { class: 'move-card' });
     if (!r) {
+      const hd = record.headers || {};
+      const lines = gameSummary(data, { w: hd.White, b: hd.Black }, f);
       card.append(
-        h('div', { class: 'mc-head' }, h('div', { class: 'mc-title' }, 'Начальная позиция')),
-        h('div', { class: 'mc-text' }, data.opening ? `Дебют: ${data.opening}. ` : '', 'Листайте партию кнопкой ▶ или нажмите на ход в списке. Ход можно сделать и на доске — получится свой вариант.'));
+        h('div', { class: 'mc-head' }, h('div', { class: 'mc-title' }, 'Итоги партии')),
+        h('ul', { class: 'summary' }, lines.map((t) => h('li', {}, t))),
+        h('div', { class: 'muted small' }, 'Листайте ходы кнопкой ▶ или нажмите на ход в ленте. Свой ход на доске — это вариант: движок сразу его оценит.'));
       return card;
     }
     const sc = r.scoreAfter;
@@ -447,7 +464,7 @@ export function mountAnalysis(root, { go, params = {} }) {
     const head = h('div', { class: 'mc-head' }, h('span', { class: 'sf-badge' }, 'SF'),
       h('div', { class: 'grow' }, h('div', { class: 'mc-title' }, 'Stockfish 18'), h('div', { class: 'mc-move', 'data-live': 'depth' }, 'анализ…')),
       h('div', { class: 'mc-eval', 'data-live': 'eval' }, '…'));
-    els.engineLine = h('div', { class: 'engine-line', 'data-live': 'line' }, '');
+    els.engineLine = h('div', { class: 'engine-lines', 'data-live': 'line' }, '');
     card.append(head, els.engineLine);
     return card;
   }
@@ -470,12 +487,27 @@ export function mountAnalysis(root, { go, params = {} }) {
     if (!l) return;
     card.textContent = formatScore(l.score);
     card.classList.toggle('white', winPercent(l.score) >= 50);
-    depthEl.textContent = `глубина ${l.depth}`;
-    const sans = uciLineToSan(live.fen, l.pv, 8);
+    depthEl.textContent = `глубина ${l.depth} · нажмите на линию, чтобы сыграть`;
     const f = fmt();
+    const start = new Chess(live.fen);
     els.engineLine.innerHTML = '';
-    els.engineLine.append(h('span', {}, sans.map(f).join(' ')));
-    if (l.pv[0]) board.setArrows([{ from: l.pv[0].slice(0, 2), to: l.pv[0].slice(2, 4), color: '#5b8bd9', opacity: 0.8 }]);
+    for (const ln of live.lines.slice(0, 3)) {
+      if (!ln || !ln.pv.length) continue;
+      let num = start.moveNumber(), white = start.turn() === 'w';
+      const sans = uciLineToSan(live.fen, ln.pv, 8).map((s, i) => {
+        const t = (white ? `${num}.` : i === 0 ? `${num}…` : '') + f(s);
+        if (!white) num++;
+        white = !white;
+        return t;
+      });
+      const u = ln.pv[0];
+      els.engineLine.append(h('button', {
+        class: 'eline',
+        onclick: () => boardMove({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] }, { animate: true }),
+      }, h('b', { class: winPercent(ln.score) >= 50 ? 'pos' : 'neg' }, formatScore(ln.score)), h('span', {}, sans.join(' '))));
+    }
+    const arrows = live.lines.slice(0, 2).filter((x) => x && x.pv[0]).map((x, i) => ({ from: x.pv[0].slice(0, 2), to: x.pv[0].slice(2, 4), color: '#5b8bd9', opacity: i ? 0.4 : 0.85 }));
+    board.setArrows(arrows);
   }
 
   function updateEvalBar() {
@@ -579,7 +611,8 @@ export function mountAnalysis(root, { go, params = {} }) {
     } else if (record.moves.length && record.source !== 'free') {
       card.append(h('button', { class: 'btn btn-block', onclick: sharePgn }, icon('share'), 'Скопировать PGN'));
     }
-    card.append(h('button', { class: 'btn btn-block btn-ghost', onclick: () => { record = null; data = null; render(); } }, icon('plus'), 'Другая партия'));
+    card.append(h('button', { class: 'btn btn-block btn-ghost', onclick: openLoadSheet }, icon('plus'), 'Другая партия'));
+    if (record.source !== 'free') card.append(h('button', { class: 'btn btn-block btn-ghost', onclick: () => openFree(START_FEN) }, icon('board'), 'Пустая доска с движком'));
     if (record.id && record.source !== 'free') {
       card.append(h('button', {
         class: 'btn btn-block btn-danger',
@@ -606,9 +639,10 @@ export function mountAnalysis(root, { go, params = {} }) {
   // ---------- Старт ----------
   if (params.gameId) {
     const rec = games.get(params.gameId);
-    if (rec) openRecord(rec, { autoReview: !!params.autoReview }); else render();
+    if (rec) openRecord(rec, { autoReview: !!params.autoReview }); else openFree(START_FEN);
   } else {
-    render();
+    openFree(START_FEN);
+    if (params.load) openLoadSheet();
   }
 
   return {
