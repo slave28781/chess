@@ -79,6 +79,26 @@ function woodHit(t, { pitch = 1, vol = 1 } = {}) {
   res.stop(t + 0.08);
 }
 
+// Резкий щелчок: шум через фильтр высоких частот, очень короткий. freq — «высота» щелчка.
+function snap(t, { freq = 3000, dur = 0.03, vol = 1 } = {}) {
+  const a = ctx;
+  const n = noise(a);
+  const hp = a.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = freq;
+  const bp = a.createBiquadFilter();
+  bp.type = 'peaking';
+  bp.frequency.value = freq * 1.3;
+  bp.gain.value = 9;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol * WOOD * 0.42, t + 0.0015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(hp).connect(bp).connect(g).connect(master);
+  n.start(t, 0.05);
+  n.stop(t + dur + 0.01);
+}
+
 function tone(t, freq, dur, { vol = 0.12, type = 'sine' } = {}) {
   vol *= TONE;
   const o = ctx.createOscillator();
@@ -102,9 +122,11 @@ function bell(t, freq, dur = 0.6, vol = 0.1) {
 
 const SOUNDS = {
   move: (t) => woodHit(t),
-  capture: (t) => { woodHit(t, { pitch: 0.85, vol: 1.15 }); woodHit(t + 0.028, { pitch: 1.25, vol: 0.55 }); },
+  // Взятие — один резкий «тх»: яркий щелчок одновременно с ударом, без второго удара.
+  capture: (t) => { snap(t, { freq: 2400, dur: 0.04, vol: 1 }); woodHit(t, { pitch: 0.8, vol: 0.95 }); },
   castle: (t) => { woodHit(t, { pitch: 0.95 }); woodHit(t + 0.11, { pitch: 1.05, vol: 0.85 }); },
-  check: (t) => { woodHit(t); bell(t + 0.02, 1046, 0.35, 0.07); },
+  // Шах — ход и сразу короткое высокое «чик».
+  check: (t) => { woodHit(t, { vol: 0.85 }); snap(t + 0.055, { freq: 5200, dur: 0.022, vol: 0.9 }); tone(t + 0.055, 2350, 0.05, { vol: 0.05, type: 'triangle' }); },
   promote: (t) => { woodHit(t); tone(t + 0.03, 660, 0.12, { vol: 0.08, type: 'triangle' }); tone(t + 0.1, 990, 0.2, { vol: 0.08, type: 'triangle' }); },
   start: (t) => { bell(t, 659, 0.5, 0.07); bell(t + 0.12, 988, 0.6, 0.07); },
   end: (t) => { bell(t, 523, 0.7, 0.08); bell(t + 0.12, 659, 0.7, 0.08); bell(t + 0.24, 784, 0.9, 0.08); },
