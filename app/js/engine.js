@@ -158,12 +158,12 @@ export class Engine {
 
 // Уровни игры. Первые три — свой «ослабитель»: случайный выбор из нескольких неплохих ходов.
 export const LEVELS = [
-  { id: 1, name: 'Новичок', note: 'часто ошибается', kind: 'random', depth: 2, multipv: 8, window: 600 },
-  { id: 2, name: 'Начинающий', note: 'видит простые угрозы', kind: 'random', depth: 4, multipv: 6, window: 250 },
-  { id: 3, name: 'Любитель', note: 'играет осмысленно', kind: 'random', depth: 7, multipv: 4, window: 120 },
-  { id: 4, name: 'Клубный', note: '≈ 1350', kind: 'elo', elo: 1350, movetime: 400 },
-  { id: 5, name: 'Разрядник', note: '≈ 1650', kind: 'elo', elo: 1650, movetime: 500 },
-  { id: 6, name: 'Сильный', note: '≈ 1950', kind: 'elo', elo: 1950, movetime: 600 },
+  { id: 1, name: 'Пешка', note: '≈ 400', kind: 'random', depth: 2, multipv: 8, window: 600 },
+  { id: 2, name: 'Конь', note: '≈ 700', kind: 'random', depth: 4, multipv: 6, window: 250 },
+  { id: 3, name: 'Слон', note: '≈ 1000', kind: 'random', depth: 7, multipv: 4, window: 120 },
+  { id: 4, name: 'Ладья', note: '≈ 1350', kind: 'elo', elo: 1350, movetime: 400 },
+  { id: 5, name: 'Ферзь', note: '≈ 1650', kind: 'elo', elo: 1650, movetime: 500 },
+  { id: 6, name: 'Король', note: '≈ 1950', kind: 'elo', elo: 1950, movetime: 600 },
   { id: 7, name: 'Мастер', note: '≈ 2300', kind: 'elo', elo: 2300, movetime: 800 },
   { id: 8, name: 'Stockfish', note: 'полная сила', kind: 'full', movetime: 1200 },
 ];
@@ -171,7 +171,8 @@ export const LEVELS = [
 const scoreValue = (s) => (s.mate !== undefined ? (s.mate > 0 ? 100000 - s.mate : -100000 - s.mate) : s.cp);
 
 // Выбор хода движком на уровне level. random — для тестов можно подменить.
-export async function chooseMove(engine, fen, level, random = Math.random) {
+// budgetMs — сколько можно думать при игре на время (иначе — время уровня).
+export async function chooseMove(engine, fen, level, random = Math.random, budgetMs = null) {
   if (level.kind === 'random') {
     const res = await engine.analyse(fen, { depth: level.depth, multipv: level.multipv });
     if (!res.lines.length) return res.bestMove;
@@ -186,6 +187,7 @@ export async function chooseMove(engine, fen, level, random = Math.random) {
   const options = level.kind === 'elo'
     ? { UCI_LimitStrength: 'true', UCI_Elo: level.elo, 'Skill Level': 20 }
     : ANALYSIS_OPTIONS;
-  const res = await engine.analyse(fen, { movetime: level.movetime, multipv: 1, options });
+  const movetime = budgetMs ? Math.max(30, Math.min(level.movetime, budgetMs)) : level.movetime;
+  const res = await engine.analyse(fen, { movetime, multipv: 1, options });
   return res.bestMove;
 }

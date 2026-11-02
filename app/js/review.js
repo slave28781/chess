@@ -7,16 +7,16 @@ import { openingInfo } from './openings.js';
 export const THRESHOLDS = { excellent: 2, good: 5, inaccuracy: 10, mistake: 20 };
 
 export const CLASSES = {
-  brilliant: { label: 'Бриллиантовый', short: '!!', color: '#26c2a3' },
-  great: { label: 'Отличный', short: '!', color: '#5b8bd9' },
-  best: { label: 'Лучший', short: '★', color: '#81b64c' },
-  excellent: { label: 'Очень хороший', short: '👍', color: '#96bc4b' },
-  good: { label: 'Хороший', short: '✓', color: '#97af8b' },
-  book: { label: 'Теория', short: '📖', color: '#a88865' },
-  forced: { label: 'Вынужденный', short: '→', color: '#8b8b8b' },
-  inaccuracy: { label: 'Неточность', short: '?!', color: '#f7c045' },
-  mistake: { label: 'Ошибка', short: '?', color: '#e58f2a' },
-  miss: { label: 'Упущение', short: '✗', color: '#ee6b55' },
+  brilliant: { label: 'Блестящий ход', short: '!!', color: '#1baca6' },
+  great: { label: 'Замечательный ход', short: '!', color: '#5c8bb0' },
+  best: { label: 'Сильнейший ход', short: '★', color: '#81b64c' },
+  excellent: { label: 'Отлично', short: '👍', color: '#96bc4b' },
+  good: { label: 'Хорошо', short: '✓', color: '#96af8b' },
+  book: { label: 'Теоретический ход', short: '📖', color: '#a88865' },
+  forced: { label: 'Вынужденный ход', short: '→', color: '#8b8f99' },
+  inaccuracy: { label: 'Неточность', short: '?!', color: '#f0c15c' },
+  mistake: { label: 'Ошибка', short: '?', color: '#e6912c' },
+  miss: { label: 'Упущенная возможность', short: '✗', color: '#ee6b55' },
   blunder: { label: 'Зевок', short: '??', color: '#ca3431' },
 };
 

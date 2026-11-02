@@ -4,10 +4,13 @@ import { Board } from '../board.js';
 import { parsePgn, writePgn } from '../pgn.js';
 import { reviewGame, classifyGame, extractPuzzles, toWhitePov, formatScore, winPercent, CLASSES, CLASS_ORDER, CLASS_NAG, uciLineToSan, terminalEval } from '../review.js';
 import { moveComment } from '../comments.js';
-import { settings, games, puzzles, uid } from '../store.js';
+import { classIconSvg } from '../icons.js';
+import { settings, games, puzzles, uid, profile as profileStore } from '../store.js';
+import { applyReview } from '../progress.js';
+import { animationMs } from '../timecontrol.js';
 import { playSound, soundForMove } from '../sound.js';
 import {
-  h, icon, fmt, toast, openSheet, segmented, getEngine, EvalBar, evalGraph, clsIcon, resultText, pgnDate, confirmSheet,
+  h, icon, fmt, toast, openSheet, segmented, getEngine, EvalBar, evalGraph, clsIcon, resultText, pgnDate, confirmSheet, celebrate,
 } from '../ui.js';
 
 const EXAMPLE = `[Event "Opera Game"]
@@ -186,6 +189,12 @@ export function mountAnalysis(root, { go, params = {} }) {
       playSound('good');
       ply = -1;
       render();
+      if (record.myColor) {
+        const me = record.myColor, sum = data.summary[me];
+        const won = (record.result === '1-0' && me === 'w') || (record.result === '0-1' && me === 'b');
+        const r = applyReview(profileStore.get(), { myCounts: sum.counts, accuracy: sum.accuracy, myMoves: sum.moves, won });
+        if (r.fresh.length) { profileStore.set(r.profile); celebrate(r.fresh); }
+      }
     } catch (e) {
       reviewing = null;
       if (!destroyed) { render(); if (!cancelled) toast(e.message || 'Разбор не удался'); }
@@ -307,11 +316,12 @@ export function mountAnalysis(root, { go, params = {} }) {
     root.append(playersHead());
 
     // Доска
+    board.setAnimation(animationMs(settings.get().animation));
     board.setPosition(c, { lastMove: lastMoveOf(c), animate });
     board.setInteractive(reviewing ? null : 'both');
     board.setCoords(settings.get().coords);
     const r = !variation && data && ply >= 0 ? data.moves[ply] : null;
-    board.setBadge(r ? { square: r.uci.slice(2, 4), text: CLASSES[r.cls].short, color: CLASSES[r.cls].color, title: CLASSES[r.cls].label } : null);
+    board.setBadge(r ? { square: r.uci.slice(2, 4), html: classIconSvg(r.cls), title: CLASSES[r.cls].label } : null);
     const arrows = [];
     if (r && r.bestMove && !['best', 'brilliant', 'great', 'book', 'forced', 'excellent'].includes(r.cls)) {
       arrows.push({ from: r.bestMove.slice(0, 2), to: r.bestMove.slice(2, 4), color: '#81b64c', opacity: 0.9 });

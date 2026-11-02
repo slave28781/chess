@@ -24,6 +24,7 @@ export class Board {
     this.pieceEls = [];
     this.drag = null;
     this.hint = null;
+    this.animMs = 300;
 
     root.classList.add('board');
     root.setAttribute('role', 'img');
@@ -134,8 +135,15 @@ export class Board {
     return { el, code, sq };
   }
 
+  // Длительность анимации хода (мс). 0 — без анимации, как в пуле.
+  setAnimation(ms) {
+    this.animMs = ms;
+    this.root.style.setProperty('--anim', `${ms}ms`);
+  }
+
   _place(p, animate) {
     const [x, y] = this._xy(p.sq);
+    if (!this.animMs) animate = false;
     if (!animate) p.el.style.transition = 'none';
     p.el.style.transform = `translate(${x * 100}%, ${y * 100}%)`;
     if (!animate) { void p.el.offsetWidth; p.el.style.transition = ''; }
@@ -175,7 +183,11 @@ export class Board {
     }
     old.forEach((o, k) => {
       if (used.has(k)) return;
-      if (animate) { o.el.classList.add('vanish'); setTimeout(() => o.el.remove(), 180); } else o.el.remove();
+      // Взятая фигура исчезает, когда бьющая уже почти пришла.
+      if (animate && this.animMs) {
+        setTimeout(() => o.el.classList.add('vanish'), this.animMs * 0.6);
+        setTimeout(() => o.el.remove(), this.animMs * 0.6 + 200);
+      } else o.el.remove();
     });
     for (const p of next) p.el.classList.remove('dragging');
     this.pieceEls = next;
@@ -192,7 +204,7 @@ export class Board {
   _renderMarks() {
     this.marksEl.innerHTML = '';
     if (!this.chess) return;
-    if (this.lastMove) { this._mark(this.lastMove.from, 'm-last'); this._mark(this.lastMove.to, 'm-last'); }
+    if (this.lastMove) { this._mark(this.lastMove.from, 'm-last'); this._mark(this.lastMove.to, 'm-last to'); }
     if (this.chess.inCheck()) this._mark(this.chess.kingSquare(this.chess.turn()), 'm-check');
     if (this.hint) this._mark(this.hint, 'm-hint');
     if (this.selected) {
@@ -224,11 +236,10 @@ export class Board {
     this.badgeEl.classList.toggle('hidden', !b);
     if (!b) return;
     const [x, y] = this._xy(b.square);
-    this.badgeEl.textContent = b.text;
+    this.badgeEl.innerHTML = b.html;
     this.badgeEl.title = b.title || '';
-    this.badgeEl.style.background = b.color;
-    this.badgeEl.style.left = `calc(${(x + 1) * 12.5}% - 3.6%)`;
-    this.badgeEl.style.top = `calc(${y * 12.5}% - 1.4%)`;
+    this.badgeEl.style.left = `calc(${(x + 1) * 12.5}% - 4.6%)`;
+    this.badgeEl.style.top = `calc(${y * 12.5}% - 1.6%)`;
     this.badgeEl.classList.remove('pop');
     void this.badgeEl.offsetWidth;
     this.badgeEl.classList.add('pop');
