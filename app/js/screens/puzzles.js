@@ -2,9 +2,11 @@
 import { Chess } from '../chess.js';
 import { Board } from '../board.js';
 import { CLASSES, toWhitePov, winFor } from '../review.js';
-import { puzzles } from '../store.js';
+import { puzzles, settings, profile as profileStore } from '../store.js';
+import { applyPuzzleSolved } from '../progress.js';
+import { animationMs } from '../timecontrol.js';
 import { playSound, soundForMove } from '../sound.js';
-import { h, icon, fmt, toast, getEngine, clsIcon } from '../ui.js';
+import { h, icon, fmt, toast, getEngine, clsIcon, celebrate } from '../ui.js';
 
 const ART = `<svg class="art" viewBox="0 0 96 96" fill="none" aria-hidden="true"><rect x="8" y="8" width="80" height="80" rx="20" fill="#23242d"/><path d="M35 70h26M38 70l3-14c-6-3-9-8-9-14 0-9 7-17 17-17l3 5h4l-2 6-5 3" stroke="#81b64c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="66" cy="30" r="9" fill="#ca3431"/><path d="M66 25v6M66 34v1" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>`;
 
@@ -60,6 +62,7 @@ export function mountPuzzles(root, { go }) {
       h('div', { class: 'mc-text' }, 'Найдите ход сильнее.')));
 
     board.setOrientation(side);
+    board.setAnimation(animationMs(settings.get().animation));
     board.setPosition(c, { animate });
     board.setInteractive(status === 'solving' || status === 'failed' ? side : null);
     board.setArrows([]);
@@ -102,6 +105,9 @@ export function mountPuzzles(root, { go }) {
     puzzles.update(p.id, { solved: (p.solved || 0) + 1, attempts: (p.attempts || 0) + 1, lastTry: Date.now() });
     p = { ...p, solved: (p.solved || 0) + 1 };
     playSound('good');
+    const reward = applyPuzzleSolved(profileStore.get());
+    profileStore.set(reward.profile);
+    if (reward.fresh.length) setTimeout(() => celebrate(reward.fresh), 900);
     render(false);
     const c = new Chess(p.fen);
     const mv = c.move(p.best);

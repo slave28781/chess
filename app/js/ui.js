@@ -1,6 +1,9 @@
 // Общие элементы интерфейса: иконки, листы, уведомления, шкала оценки, график, значки ходов.
 import { CLASSES, winPercent, formatScore } from './review.js';
 import { makeFormatter } from './notation.js';
+import { classIconSvg } from './icons.js';
+import { THEMES, OPPONENTS, achievementById, rewardsOf } from './progress.js';
+import { playSound } from './sound.js';
 import { settings } from './store.js';
 import { Engine, workerTransport } from './engine.js';
 
@@ -46,6 +49,7 @@ export const ICONS = {
   close: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
   bolt: svg('<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>'),
   target: svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
+  profile: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>'),
   board: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>'),
 };
 
@@ -67,7 +71,7 @@ export function fmt() {
 export function clsIcon(cls, size = '') {
   const c = CLASSES[cls];
   if (!c) return h('span');
-  return h('span', { class: `cls-icon ${size}`, style: { background: c.color }, title: c.label }, c.short);
+  return h('span', { class: `cls-icon ${size}`, title: c.label, role: 'img', 'aria-label': c.label, html: classIconSvg(cls) });
 }
 
 // ---------- Уведомления ----------
@@ -195,6 +199,7 @@ export function getEngine() {
 export function resultText(result, reason) {
   const reasons = {
     checkmate: 'мат', stalemate: 'пат', insufficient: 'недостаточно материала', threefold: 'троекратное повторение', fifty: 'правило 50 ходов', resign: 'сдача',
+    timeout: 'время вышло', 'timeout-draw': 'время вышло, но сопернику нечем матовать',
   };
   const r = reasons[reason] ? ` · ${reasons[reason]}` : '';
   if (result === '1-0') return 'Победа белых' + r;
@@ -224,4 +229,52 @@ export function capturedInfo(chess, color) {
   for (const t of ['q', 'r', 'b', 'n', 'p']) s += SYMBOL[t].repeat(Math.max(0, START_COUNT[t] - left[t]));
   const diff = chess.material(color) - chess.material(enemy);
   return { symbols: s, diff };
+}
+
+// ---------- Стили доски, соперники, награды ----------
+export function applyTheme(themeId) {
+  const t = THEMES.find((x) => x.id === themeId) || THEMES[0];
+  document.documentElement.style.setProperty('--light-sq', t.light);
+  document.documentElement.style.setProperty('--dark-sq', t.dark);
+}
+
+const OPP_PIECE = { 1: 'P', 2: 'N', 3: 'B', 4: 'R', 5: 'Q', 6: 'K', 7: 'K', 8: 'N' };
+const OPP_BG = { 7: 'linear-gradient(135deg, #b8902f, #6b5216)', 8: 'linear-gradient(135deg, #3b4a6b, #24304a)' };
+export function oppAvatar(id) {
+  return h('div', { class: 'avatar sf', style: { background: OPP_BG[id] || 'linear-gradient(135deg, #3a3d4a, #262832)' } },
+    h('img', { src: oppPieceUrl(id), alt: '' }));
+}
+export function oppPieceUrl(id) { return `pieces/w${OPP_PIECE[id] || 'N'}.svg`; }
+
+// Поздравление: новые награды, открытые стили и соперники. Показывает по очереди, возвращает Promise.
+export function celebrate(fresh = [], unlockedOpps = []) {
+  const items = [
+    ...fresh.map((id) => ({ kind: 'ach', a: achievementById(id) })).filter((x) => x.a),
+    ...unlockedOpps.map((id) => ({ kind: 'opp', o: OPPONENTS.find((o) => o.id === id) })).filter((x) => x.o),
+  ];
+  return items.reduce((p, it) => p.then(() => new Promise((resolve) => {
+    playSound('good');
+    openSheet((sheet, close) => {
+      const done = () => { close(); resolve(); };
+      if (it.kind === 'ach') {
+        const themes = rewardsOf(it.a.id);
+        append(sheet,
+          h('div', { class: 'reward-hero' },
+            h('div', { class: 'muted small' }, 'Новая награда'),
+            h('div', { class: 'ico' }, it.a.icon),
+            h('h2', {}, it.a.title),
+            h('div', { class: 'muted' }, it.a.desc),
+            themes.length ? h('div', { class: 'banner ok', style: { marginTop: '6px' } }, `Открыт стиль доски «${themes.map((t) => t.name).join('», «')}»`) : null),
+          h('button', { class: 'btn btn-primary btn-block', onclick: done }, 'Отлично'));
+      } else {
+        append(sheet,
+          h('div', { class: 'reward-hero' },
+            h('div', { class: 'muted small' }, 'Новый соперник'),
+            h('img', { src: oppPieceUrl(it.o.id), alt: '', style: { width: '64px', height: '64px' } }),
+            h('h2', {}, it.o.name),
+            h('div', { class: 'muted' }, `Рейтинг ≈ ${it.o.rating}. Сыграйте во вкладке «Игра».`)),
+          h('button', { class: 'btn btn-primary btn-block', onclick: done }, 'Отлично'));
+      }
+    });
+  })), Promise.resolve());
 }

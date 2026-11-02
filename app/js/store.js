@@ -1,6 +1,9 @@
 // Хранение на телефоне (localStorage): настройки, партии с разбором, задачи, текущая игра.
 
+import { newProfile } from './progress.js';
+
 const KEYS = {
+  profile: 'chess.profile.v1',
   settings: 'chess.settings.v1',
   games: 'chess.games.v1',
   puzzles: 'chess.puzzles.v1',
@@ -13,9 +16,17 @@ export const DEFAULT_SETTINGS = {
   sound: true,
   coords: true,
   depth: 14,
-  level: 4,
+  level: 2,
   playColor: 'w',
   myColor: 'w',
+  animation: 'auto', // auto | slow | normal | fast | off
+  timeControl: '5+0',
+  rated: true,
+};
+
+export const profile = {
+  get() { return { ...newProfile(), ...read(KEYS.profile, {}) }; },
+  set(p) { return write(KEYS.profile, p); },
 };
 
 function read(key, fallback) {

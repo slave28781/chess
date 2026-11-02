@@ -1,11 +1,12 @@
 // Офлайн-режим. Код приложения: сначала сеть (обновления приходят сразу), без сети — кэш.
 // Движок и фигуры не меняются: сначала кэш, чтобы 7 МБ не качались каждый раз.
-const CACHE = 'chess-v1';
+const CACHE = 'chess-v2';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/main.js', 'js/ui.js', 'js/board.js', 'js/chess.js', 'js/pgn.js', 'js/engine.js', 'js/review.js',
   'js/comments.js', 'js/openings.js', 'js/notation.js', 'js/store.js', 'js/sound.js',
-  'js/screens/play.js', 'js/screens/analysis.js', 'js/screens/puzzles.js', 'js/screens/games.js',
+  'js/icons.js', 'js/progress.js', 'js/timecontrol.js',
+  'js/screens/play.js', 'js/screens/analysis.js', 'js/screens/puzzles.js', 'js/screens/games.js', 'js/screens/profile.js',
   'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   ...['w', 'b'].flatMap((c) => ['K', 'Q', 'R', 'B', 'N', 'P'].map((p) => `pieces/${c}${p}.svg`)),
 ];
