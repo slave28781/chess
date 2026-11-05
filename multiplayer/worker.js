@@ -18,10 +18,18 @@ export class Room {
   async fetch(request) {
     const token = new URL(request.url).searchParams.get('token');
     let state = await this.ctx.storage.get('game');
-    if (!state) state = { players: {}, moves: [], clock: { w: 300000, b: 300000 }, turn: 'w', started: false, deadline: null, result: null };
+    if (!state) {
+      const url = new URL(request.url);
+      const controls = { '1+0': [60000, 0], '3+0': [180000, 0], '3+2': [180000, 2000], '5+0': [300000, 0], '5+3': [300000, 3000], '10+0': [600000, 0], '10+5': [600000, 5000], '15+10': [900000, 10000] };
+      const tc = Object.hasOwn(controls, url.searchParams.get('tc')) ? url.searchParams.get('tc') : '5+0';
+      const [base, increment] = controls[tc];
+      const side = url.searchParams.get('side');
+      const creatorColor = side === 'b' ? 'b' : side === 'random' ? (crypto.getRandomValues(new Uint8Array(1))[0] & 1 ? 'w' : 'b') : 'w';
+      state = { players: {}, moves: [], clock: { w: base, b: base }, tc, increment, creatorColor, turn: 'w', started: false, deadline: null, result: null };
+    }
     let color = Object.keys(state.players).find(c => state.players[c] === token);
     if (!color) {
-      color = !state.players.w ? 'w' : !state.players.b ? 'b' : null;
+      color = !state.players.w && !state.players.b ? (state.creatorColor || 'w') : !state.players.w ? 'w' : !state.players.b ? 'b' : null;
       if (!color) return new Response('Room full', { status: 403 });
       state.players[color] = token;
     }
@@ -74,7 +82,7 @@ export class Room {
       let move;
       try { move = game.move(data.move); } catch { return; }
       if (!move) { await this.broadcast(state); return; }
-      state.clock[color] = Math.max(0, state.deadline - now);
+      state.clock[color] = Math.max(0, state.deadline - now) + (state.increment || 0);
       state.moves.push({ from: move.from, to: move.to, promotion: move.promotion });
       state.turn = game.turn();
       if (game.isGameOver()) {
