@@ -30,7 +30,11 @@ export function mountOnline(root) {
   const resign = h('button', { class: 'btn btn-danger btn-block', onclick: async () => {
     if (await confirmSheet('Сдаться?', 'Партия завершится поражением.', 'Сдаться', true)) socket?.send(JSON.stringify({ type: 'resign' }));
   } }, 'Сдаться');
+  const timeChoice = h('select', { 'aria-label': 'Контроль времени' }, ...['1+0', '3+0', '3+2', '5+0', '5+3', '10+0', '10+5', '15+10'].map(t => h('option', { value: t, selected: t === '5+0' }, t)));
+  const sideChoice = h('select', { 'aria-label': 'Цвет фигур' }, h('option', { value: 'w' }, 'Белые'), h('option', { value: 'b' }, 'Чёрные'), h('option', { value: 'random' }, 'Случайный цвет'));
+  let requestedTime = '5+0', requestedSide = 'w';
   const create = h('button', { class: 'btn btn-primary btn-block', onclick: () => {
+    requestedTime = timeChoice.value; requestedSide = sideChoice.value;
     room = randomHex(16);
     const url = new URL(location.href); url.searchParams.set('room', room); history.replaceState(null, '', url);
     connect();
@@ -39,7 +43,7 @@ export function mountOnline(root) {
   const prev = h('button', { class: 'history-arrow', 'aria-label': 'Предыдущий ход', onclick: () => navigate(-1) }, '‹');
   const next = h('button', { class: 'history-arrow', 'aria-label': 'Следующий ход', onclick: () => navigate(1) }, '›');
   function navigate(delta) { if (!state) return; viewedPly = Math.max(0, Math.min(state.moves.length, (viewedPly ?? state.moves.length) + delta)); drawPosition(false); }
-  const menu = h('details', { class: 'online-menu' }, h('summary', {}, 'Меню партии'), h('div', { class: 'stack online-menu-content' }, create, share, resign));
+  const menu = h('details', { class: 'online-menu' }, h('summary', {}, 'Меню партии'), h('div', { class: 'stack online-menu-content' }, h('div', { class: 'label' }, 'Время'), timeChoice, h('div', { class: 'label' }, 'Ваш цвет'), sideChoice, create, share, resign));
   const profile = onlineProfile(() => state && socket?.readyState === WebSocket.OPEN ? room : null, (id) => { room = id; const url = new URL(location.href); url.searchParams.set('room', room); history.replaceState(null, '', url); connect(); });
   root.append(profile.root, h('div', { class: 'history-bar' }, prev, strip, next), h('div', { class: 'online-status' }, title, status), clocks, h('div', { class: 'board-wrap full' }, board.root), menu);
   function drawPosition(animate) {
@@ -83,7 +87,7 @@ export function mountOnline(root) {
     state = null; previous = 0; board.setInteractive(null);
     let token = localStorage.getItem('chess.online.' + room);
     if (!/^[a-f0-9]{64}$/.test(token || '')) { token = randomHex(32); localStorage.setItem('chess.online.' + room, token); }
-    const url = new URL('/' + room, ONLINE_SERVER); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'; url.searchParams.set('token', token);
+    const url = new URL('/' + room, ONLINE_SERVER); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'; url.searchParams.set('token', token); url.searchParams.set('tc', requestedTime); url.searchParams.set('side', requestedSide);
     status.textContent = 'Подключение…';
     socket = new WebSocket(url);
     socket.onmessage = e => { try { render(JSON.parse(e.data)); } catch { status.textContent = 'Ошибка данных партии'; } };
