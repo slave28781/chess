@@ -3,8 +3,12 @@ main = "worker.js"
 compatibility_date = "2025-04-01"
 
 [durable_objects]
-bindings = [{ name = "ROOMS", class_name = "Room" }]
+bindings = [{ name = "ROOMS", class_name = "Room" }, { name = "PROFILES", class_name = "Profiles" }]
 
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Profiles"]

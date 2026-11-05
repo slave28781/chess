@@ -5,6 +5,7 @@ import { animationMs, formatClock } from '../timecontrol.js';
 import { playSound, soundForMove } from '../sound.js';
 import { h, toast, confirmSheet } from '../ui.js';
 import { ONLINE_SERVER } from '../online-config.js';
+import { onlineProfile } from '../online-profile.js';
 
 const randomHex = (bytes) => [...crypto.getRandomValues(new Uint8Array(bytes))].map(x => x.toString(16).padStart(2, '0')).join('');
 export function mountOnline(root) {
@@ -39,7 +40,8 @@ export function mountOnline(root) {
   const next = h('button', { class: 'history-arrow', 'aria-label': 'Следующий ход', onclick: () => navigate(1) }, '›');
   function navigate(delta) { if (!state) return; viewedPly = Math.max(0, Math.min(state.moves.length, (viewedPly ?? state.moves.length) + delta)); drawPosition(false); }
   const menu = h('details', { class: 'online-menu' }, h('summary', {}, 'Меню партии'), h('div', { class: 'stack online-menu-content' }, create, share, resign));
-  root.append(h('div', { class: 'history-bar' }, prev, strip, next), h('div', { class: 'online-status' }, title, status), clocks, h('div', { class: 'board-wrap full' }, board.root), menu);
+  const profile = onlineProfile(() => state && socket?.readyState === WebSocket.OPEN ? room : null, (id) => { room = id; const url = new URL(location.href); url.searchParams.set('room', room); history.replaceState(null, '', url); connect(); });
+  root.append(profile.root, h('div', { class: 'history-bar' }, prev, strip, next), h('div', { class: 'online-status' }, title, status), clocks, h('div', { class: 'board-wrap full' }, board.root), menu);
   function drawPosition(animate) {
     if (!state) { prev.disabled = next.disabled = true; return; }
     const ply = Math.min(viewedPly ?? state.moves.length, state.moves.length);
@@ -89,5 +91,5 @@ export function mountOnline(root) {
   }
   timer = setInterval(drawClock, 200);
   if (room) connect();
-  return { refresh() { board.setAnimation(animationMs(settings.get().animation)); board.setCoords(settings.get().coords); }, destroy() { destroyed = true; clearInterval(timer); clearTimeout(reconnect); socket?.close(); } };
+  return { refresh() { board.setAnimation(animationMs(settings.get().animation)); board.setCoords(settings.get().coords); }, destroy() { profile.destroy(); destroyed = true; clearInterval(timer); clearTimeout(reconnect); socket?.close(); } };
 }
