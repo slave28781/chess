@@ -4,6 +4,7 @@ import { THEMES, isThemeUnlocked, achievementById } from './progress.js';
 import { setSoundEnabled, playSound } from './sound.js';
 import { h, append, icon, openSheet, segmented, switchEl, confirmSheet, getEngine, toast, applyTheme } from './ui.js';
 import { mountPlay } from './screens/play.js';
+import { mountOnline } from './screens/online.js';
 import { mountAnalysis } from './screens/analysis.js';
 import { mountPuzzles } from './screens/puzzles.js';
 import { mountGames } from './screens/games.js';
@@ -11,6 +12,7 @@ import { mountProfile } from './screens/profile.js';
 
 const TABS = [
   ['play', 'Игра', mountPlay],
+  ['online', 'С другом', mountOnline],
   ['analysis', 'Анализ', mountAnalysis],
   ['puzzles', 'Задачи', mountPuzzles],
   ['games', 'Партии', mountGames],
@@ -45,7 +47,7 @@ function renderTabs() {
       class: 'tab' + (id === currentTab ? ' active' : ''),
       'aria-current': id === currentTab ? 'page' : null,
       onclick: () => go(id),
-    }, icon(id), label, id === 'puzzles' && todo ? h('span', { class: 'dot' }, String(Math.min(todo, 99))) : null));
+    }, icon(id === 'online' ? 'play' : id), label, id === 'puzzles' && todo ? h('span', { class: 'dot' }, String(Math.min(todo, 99))) : null));
   }
   renderHeader();
 }
@@ -125,7 +127,7 @@ window.addEventListener('storage', renderHeader);
 setInterval(renderHeader, 1500);
 
 applySettings();
-go(location.hash.slice(1) || 'play');
+go(new URL(location.href).searchParams.has('room') ? 'online' : (location.hash.slice(1) || 'play'));
 
 // Движок грузится заранее, чтобы первый ход и разбор не ждали загрузки 7 МБ.
 setTimeout(() => { getEngine().catch(() => {}); }, 800);
