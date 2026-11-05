@@ -47,7 +47,7 @@ function renderTabs() {
       class: 'tab' + (id === currentTab ? ' active' : ''),
       'aria-current': id === currentTab ? 'page' : null,
       onclick: () => go(id),
-    }, icon(id === 'online' ? 'play' : id), label, id === 'puzzles' && todo ? h('span', { class: 'dot' }, String(Math.min(todo, 99))) : null));
+    }, icon(id), label, id === 'puzzles' && todo ? h('span', { class: 'dot' }, String(Math.min(todo, 99))) : null));
   }
   renderHeader();
 }
