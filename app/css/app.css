@@ -129,7 +129,7 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
 
 .b-piece {
   position: absolute; left: 0; top: 0; width: 12.5%; height: 12.5%; background-size: 100% 100%; z-index: 2;
-  transition: transform var(--anim, 300ms) cubic-bezier(0.3, 0.7, 0.25, 1), opacity 0.18s ease; will-change: transform; pointer-events: none;
+  transition: transform var(--anim, 300ms) cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; will-change: transform; pointer-events: none;
 }
 .b-piece.dragging { z-index: 10; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45)); }
 .b-piece.vanish { opacity: 0; }

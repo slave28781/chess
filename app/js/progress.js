@@ -18,6 +18,9 @@ export const OPPONENTS = [
 // Стили доски. reward — id награды, которая открывает стиль (null — открыт сразу).
 export const THEMES = [
   { id: 'green', name: 'Зелёная', light: '#ebecd0', dark: '#739552', reward: null },
+  { id: 'slate', name: 'Сланец', light: '#e2e8e8', dark: '#667e87', reward: null },
+  { id: 'rose', name: 'Роза', light: '#f6e5e4', dark: '#b77980', reward: null },
+  { id: 'forest', name: 'Лес', light: '#e4e9d6', dark: '#547363', reward: null },
   { id: 'brown', name: 'Дерево', light: '#f0d9b5', dark: '#b58863', reward: null },
   { id: 'blue', name: 'Синяя', light: '#dee3e6', dark: '#8ca2ad', reward: 'first_win' },
   { id: 'purple', name: 'Фиолетовая', light: '#e8e1f2', dark: '#8c74b4', reward: 'rating_700' },

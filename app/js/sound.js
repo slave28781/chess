@@ -124,9 +124,9 @@ const SOUNDS = {
   move: (t) => woodHit(t),
   // Взятие — один резкий «тх»: яркий щелчок одновременно с ударом, без второго удара.
   capture: (t) => { snap(t, { freq: 2400, dur: 0.04, vol: 1 }); woodHit(t, { pitch: 0.8, vol: 0.95 }); },
-  castle: (t) => { woodHit(t, { pitch: 0.95 }); woodHit(t + 0.11, { pitch: 1.05, vol: 0.85 }); },
+  castle: (t) => { woodHit(t, { pitch: 0.9 }); snap(t, { freq: 1900, dur: 0.035, vol: 0.55 }); },
   // Шах — ход и сразу короткое высокое «чик».
-  check: (t) => { woodHit(t, { vol: 0.85 }); snap(t + 0.055, { freq: 5200, dur: 0.022, vol: 0.9 }); tone(t + 0.055, 2350, 0.05, { vol: 0.05, type: 'triangle' }); },
+  check: (t) => { woodHit(t, { pitch: 1.12, vol: 0.9 }); snap(t, { freq: 3500, dur: 0.035, vol: 0.8 }); },
   promote: (t) => { woodHit(t); tone(t + 0.03, 660, 0.12, { vol: 0.08, type: 'triangle' }); tone(t + 0.1, 990, 0.2, { vol: 0.08, type: 'triangle' }); },
   start: (t) => { bell(t, 659, 0.5, 0.07); bell(t + 0.12, 988, 0.6, 0.07); },
   end: (t) => { bell(t, 523, 0.7, 0.08); bell(t + 0.12, 659, 0.7, 0.08); bell(t + 0.24, 784, 0.9, 0.08); },

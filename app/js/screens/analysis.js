@@ -288,11 +288,43 @@ export function mountAnalysis(root, { go, params = {} }) {
   function openLoadSheet() {
     let myColor = settings.get().myColor || 'w';
     const ta = h('textarea', { placeholder: 'Вставьте PGN партии (chess.com, lichess) или FEN позиции', 'aria-label': 'PGN или FEN', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off' });
-    openSheet((sheet, close) => sheet.append(
+    const username = h('input', { placeholder: 'Ник на сайте', 'aria-label': 'Ник игрока', autocomplete: 'off' });
+    const source = h('select', { 'aria-label': 'Шахматный сайт' }, h('option', { value: 'lichess' }, 'Lichess'), h('option', { value: 'chesscom' }, 'Chess.com'));
+    const results = h('div', { class: 'stack' });
+    let sheetClose;
+    async function loadGames() {
+      const name = username.value.trim();
+      if (!/^[a-zA-Z0-9_-]{2,30}$/.test(name)) { toast('Проверьте ник игрока'); return; }
+      results.replaceChildren(h('p', {}, 'Загрузка партий…'));
+      try {
+        let list;
+        if (source.value === 'lichess') {
+          const response = await fetch(`https://lichess.org/api/games/user/${encodeURIComponent(name)}?max=20&pgnInJson=true`, { headers: { Accept: 'application/x-ndjson' } });
+          if (!response.ok) throw new Error(`Ошибка сервиса: ${response.status}`);
+          list = (await response.text()).trim().split('\n').filter(Boolean).map((line) => { const g = JSON.parse(line); return { pgn: g.pgn, label: `${g.players?.white?.user?.name || 'Белые'} — ${g.players?.black?.user?.name || 'Чёрные'}` }; });
+        } else {
+          const response = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(name)}/games/archives`);
+          if (!response.ok) throw new Error(`Ошибка сервиса: ${response.status}`);
+          const archives = (await response.json()).archives || [];
+          if (!archives.length) { results.replaceChildren(h('p', {}, 'Партий не найдено')); return; }
+          const gamesResponse = await fetch(archives[archives.length - 1]);
+          if (!gamesResponse.ok) throw new Error(`Ошибка сервиса: ${gamesResponse.status}`);
+          list = ((await gamesResponse.json()).games || []).slice(-20).reverse().map((g) => ({ pgn: g.pgn, label: `${g.white?.username || 'Белые'} — ${g.black?.username || 'Чёрные'}` }));
+        }
+        results.replaceChildren();
+        for (const game of list.filter((g) => g.pgn)) results.append(h('button', { class: 'btn btn-block', onclick: () => { sheetClose(); submitText(game.pgn, myColor); } }, game.label));
+        if (!results.childNodes.length) results.append(h('p', {}, 'Партий не найдено'));
+      } catch (e) { results.replaceChildren(h('p', {}, `Не удалось загрузить партии: ${e.message}`)); }
+    }
+    openSheet((sheet, close) => { sheetClose = close; sheet.append(
       h('div', { class: 'stack' },
         h('h2', {}, 'Разбор партии'),
         h('p', { style: { margin: 0 } }, 'Stockfish 18 оценит каждый ход: от 💎 бриллиантовых до ?? зевков, посчитает точность и объяснит ошибки.'),
         ta,
+        h('div', { class: 'label' }, 'Импорт по нику (последние партии)'),
+        h('div', { class: 'row' }, source, username),
+        h('button', { class: 'btn btn-block', onclick: loadGames }, 'Найти партии'),
+        results,
         h('div', { class: 'row' },
           h('button', {
             class: 'btn btn-sm grow',
@@ -302,7 +334,7 @@ export function mountAnalysis(root, { go, params = {} }) {
         h('div', {}, h('div', { class: 'label' }, 'Я играл'), segmented([['w', 'Белыми'], ['b', 'Чёрными'], ['none', 'Не я']], myColor, (v) => { myColor = v; if (v !== 'none') settings.set({ myColor: v }); })),
         h('button', { class: 'btn btn-primary btn-block', onclick: () => { close(); submitText(ta.value, myColor); } }, icon('analysis'), 'Разобрать'),
         h('button', { class: 'btn btn-ghost btn-block', onclick: () => { close(); go('games'); } }, 'Выбрать из моих партий')),
-    ));
+    ); });
   }
 
   function render({ animate = true } = {}) {
