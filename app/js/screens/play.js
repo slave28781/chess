@@ -20,6 +20,7 @@ export function mountPlay(root, { go, params = {} }) {
   let since = null;      // когда пошли текущие часы (Date.now), null — часы стоят
   let ticker = null;
   let lowWarned = false;
+  let viewedPly = null;
   const clockEls = { w: null, b: null };
 
   const board = new Board(h('div'), { onMove: (m, o) => userMove(m, o) });
@@ -30,7 +31,10 @@ export function mountPlay(root, { go, params = {} }) {
   const actUndo = h('button', { class: 'action', onclick: () => undo() }, icon('undo'), 'Отменить');
   const actFlip = h('button', { class: 'action', onclick: () => { board.flip(); renderPlayers(); } }, icon('flip'), 'Перевернуть');
   const actMore = h('button', { class: 'action', onclick: () => more() }, icon('more'), 'Ещё');
-  root.append(top, h('div', { class: 'board-wrap full' }, board.root), bottom, strip, h('div', { class: 'actions' }, actHint, actUndo, actFlip, actMore));
+  const historyPrev = h('button', { class: 'history-arrow', 'aria-label': 'Предыдущий ход', onclick: () => navigateHistory(-1) }, '‹');
+  const historyNext = h('button', { class: 'history-arrow', 'aria-label': 'Следующий ход', onclick: () => navigateHistory(1) }, '›');
+  root.append(h('div', { class: 'history-bar' }, historyPrev, strip, historyNext), top, h('div', { class: 'board-wrap full' }, board.root), bottom, h('div', { class: 'actions' }, actHint, actUndo, actFlip, actMore));
+  function navigateHistory(delta) { viewedPly = Math.max(0, Math.min(chess.history().length, (viewedPly ?? chess.history().length) + delta)); render(false); }
 
   const level = () => LEVELS.find((l) => l.id === state.level) || LEVELS[1];
   const opponent = () => OPPONENTS.find((o) => o.id === state.level) || OPPONENTS[1];
@@ -164,16 +168,23 @@ export function mountPlay(root, { go, params = {} }) {
     const hist = chess.history();
     hist.forEach((m, i) => {
       const num = m.color === 'w' ? `${Math.floor(i / 2) + 1}.` : (i === 0 ? '1…' : '');
-      strip.append(h('span', { class: 'mchip' + (i === hist.length - 1 ? ' cur' : '') }, num ? h('span', { class: 'num' }, num) : null, f(m.san)));
+      strip.append(h('span', { class: 'mchip' + (i === (viewedPly ?? hist.length) - 1 ? ' cur' : '') }, num ? h('span', { class: 'num' }, num) : null, f(m.san)));
     });
-    strip.scrollLeft = strip.scrollWidth;
+    strip.querySelector('.cur')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    historyPrev.disabled = (viewedPly ?? hist.length) <= 0;
+    historyNext.disabled = (viewedPly ?? hist.length) >= hist.length;
   }
 
   function render(animate = true) {
     board.setAnimation(animationMs(settings.get().animation, tc().cat));
-    board.setPosition(chess, { lastMove: lastMove(), animate });
+    const hist = chess.history();
+    const ply = Math.min(viewedPly ?? hist.length, hist.length);
+    const display = ply === hist.length ? chess : new Chess(state.startFen);
+    if (display !== chess) for (const m of hist.slice(0, ply)) display.move(m.uci);
+    const shown = ply ? hist[ply - 1] : null;
+    board.setPosition(display, { lastMove: shown ? { from: shown.from, to: shown.to } : null, animate });
     board.setArrows([]);
-    const myTurn = !state.result && !thinking && chess.turn() === state.color;
+    const myTurn = ply === hist.length && !state.result && !thinking && chess.turn() === state.color;
     board.setInteractive(myTurn ? state.color : null);
     actHint.disabled = !myTurn || state.rated;
     actUndo.disabled = thinking || !state.moves.length || (state.rated && !state.result) || !!state.result;
@@ -216,6 +227,7 @@ export function mountPlay(root, { go, params = {} }) {
     const mv = chess.move(input);
     if (!mv) return null;
     state.moves.push({ san: mv.san, uci: mv.uci });
+    viewedPly = null;
     pressClock(color);
     save();
     playSound(soundForMove(mv, chess));

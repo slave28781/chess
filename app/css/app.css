@@ -417,3 +417,28 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
 .eline b.neg { background: #3b3d48; color: #eceef4; }
 .eline span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .summary { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; color: #c9ccd8; font-size: 15px; }
+
+/* Компактная игровая панель и история. */
+.history-bar { display: flex; align-items: center; min-width: 0; gap: 4px; }
+.history-bar .moves-strip { flex: 1; min-width: 0; }
+.history-arrow { flex: none; width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--surface); color: var(--text); font-size: 28px; line-height: 1; }
+.history-arrow:disabled { opacity: .35; }
+.online-status { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.online-status h2, .online-status p { margin: 0; font-size: 14px; }
+.online-menu { border-radius: 12px; background: var(--surface); }
+.online-menu summary { cursor: pointer; padding: 12px 14px; font-weight: 600; }
+.online-menu-content { padding: 0 12px 12px; animation: onlineMenuEnter .2s ease-out; }
+@keyframes onlineMenuEnter { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 600px) {
+  .topbar { padding: calc(env(safe-area-inset-top) + 4px) 10px 4px; }
+  .brand { font-size: 16px; gap: 6px; }
+  main#view { gap: 6px; }
+  .player { min-height: 38px; gap: 6px; }
+  .player-name { font-size: 14px; }
+  .player-sub { font-size: 11px; min-height: 14px; }
+  .mchip { padding: 6px 8px; font-size: 14px; }
+  .action { min-height: 48px; font-size: 11px; }
+  .tab { font-size: clamp(9px, 2.6vw, 11px); }
+  .tab svg { width: 22px; height: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .online-menu-content { animation: none; } }
