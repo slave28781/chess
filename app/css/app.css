@@ -442,3 +442,14 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
   .tab svg { width: 22px; height: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .online-menu-content { animation: none; } }
+
+/* Планшеты: пространство вокруг доски и элементов управления растёт вместе с экраном. */
+@media (min-width: 700px) {
+  #app { max-width: min(760px, 100vw); }
+  .tabbar-inner { max-width: 760px; }
+  main#view { padding-left: 20px; padding-right: 20px; gap: 14px; }
+  .board-wrap { width: min(100%, calc(100dvh - 250px)); min-width: min(100%, 360px); align-self: center; }
+  .board-wrap.full { margin: 0 auto; }
+  .board-wrap.full .board { border-radius: 8px; }
+  .sheet { max-width: 640px; }
+}

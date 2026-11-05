@@ -1,5 +1,6 @@
 // Экран «Задачи»: позиции из ваших же ошибок — найдите ход лучше, чем был сыгран.
 import { Chess } from '../chess.js';
+import { mountThemedPuzzles } from './themed-puzzles.js';
 import { Board } from '../board.js';
 import { CLASSES, toWhitePov, winFor } from '../review.js';
 import { puzzles, settings, profile as profileStore } from '../store.js';
@@ -11,6 +12,7 @@ import { h, icon, fmt, toast, getEngine, clsIcon, celebrate } from '../ui.js';
 const ART = `<svg class="art" viewBox="0 0 96 96" fill="none" aria-hidden="true"><rect x="8" y="8" width="80" height="80" rx="20" fill="#23242d"/><path d="M35 70h26M38 70l3-14c-6-3-9-8-9-14 0-9 7-17 17-17l3 5h4l-2 6-5 3" stroke="#81b64c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="66" cy="30" r="9" fill="#ca3431"/><path d="M66 25v6M66 34v1" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>`;
 
 export function mountPuzzles(root, { go }) {
+  let themed = null;
   let p = null;
   let status = 'solving'; // solving | checking | solved | failed | revealed
   let message = '';
@@ -33,6 +35,7 @@ export function mountPuzzles(root, { go }) {
   function render(animate = true) {
     if (destroyed) return;
     root.innerHTML = '';
+    root.append(h('button', { class: 'btn btn-block', onclick: () => { token++; themed = mountThemedPuzzles(root, () => { themed = null; render(false); }); } }, icon('puzzles'), 'Тематические задачи'));
     const st = stats();
     if (!st.total) {
       root.append(h('div', { class: 'card empty' },
@@ -165,5 +168,5 @@ export function mountPuzzles(root, { go }) {
   }
 
   render(false);
-  return { destroy() { destroyed = true; token++; }, refresh() { render(false); } };
+  return { destroy() { destroyed = true; token++; themed?.destroy(); }, refresh() { if (!themed) render(false); } };
 }
