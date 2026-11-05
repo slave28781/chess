@@ -66,7 +66,8 @@ export function mountOnline(root) {
   function navigate(delta) { if (!state) return; viewedPly = Math.max(0, Math.min(state.moves.length, (viewedPly ?? state.moves.length) + delta)); drawPosition(false); }
   const menu = h('button', { class: 'btn btn-block', onclick: openMenu }, 'Меню партии');
   const profile = onlineProfile(() => state && socket?.readyState === WebSocket.OPEN ? room : null, (id) => { room = id; const url = new URL(location.href); url.searchParams.set('room', room); history.replaceState(null, '', url); connect(); });
-  root.append(profile.root, h('div', { class: 'history-bar' }, prev, strip, next), h('div', { class: 'online-status' }, title, status), clocks, h('div', { class: 'board-wrap full' }, board.root), menu);
+  resign.style.display = 'none';
+  root.append(profile.root, h('div', { class: 'history-bar' }, prev, strip, next), h('div', { class: 'online-status' }, title, status), clocks, h('div', { class: 'board-wrap full' }, board.root), menu, resign);
   function drawPosition(animate) {
     if (!state) { prev.disabled = next.disabled = true; return; }
     const ply = Math.min(viewedPly ?? state.moves.length, state.moves.length);
@@ -84,7 +85,9 @@ export function mountOnline(root) {
     if (!state) return;
     const values = { ...state.clock };
     if (state.started && !state.result && state.deadline) values[state.turn] = Math.max(0, state.deadline - (Date.now() + offset));
-    clocks.replaceChildren(h('span', { class: 'grow' }, `Белые: ${formatClock(values.w)}`), h('span', {}, `Чёрные: ${formatClock(values.b)}`));
+    clocks.replaceChildren(...['w', 'b'].map(color => h('div', { class: 'player grow' },
+      h('div', { class: 'player-name grow' }, color === 'w' ? 'Белые' : 'Чёрные'),
+      h('div', { class: 'clock' + (state.started && !state.result && state.turn === color ? ' on' : '') + (values[color] < 10000 ? ' low' : ''), 'aria-label': color === 'w' ? 'Часы белых' : 'Часы чёрных' }, formatClock(values[color])))));
   }
   function render(data) {
     const game = new Chess();
@@ -94,6 +97,8 @@ export function mountOnline(root) {
     const sound = previous > 0 && data.moves.length === previous + 1;
     if (!state || data.moves.length !== previous) viewedPly = null;
     state = data;
+    menu.style.display = data.started && !data.result ? 'none' : '';
+    resign.style.display = data.started && !data.result ? '' : 'none';
     board.setOrientation(data.color);
     drawPosition(sound);
     if (sound) playSound(soundForMove(last, game));
