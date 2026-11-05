@@ -1,10 +1,10 @@
 // Офлайн-режим. Код приложения: сначала сеть (обновления приходят сразу), без сети — кэш.
 // cache: 'no-cache' — браузер сверяется с сайтом каждый раз, а не берёт файл из своего кэша на 10 минут.
 // Движок и фигуры не меняются: сначала кэш, чтобы 7 МБ не качались каждый раз.
-const CACHE = 'chess-v5';
+const CACHE = 'chess-v6';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
-  'js/main.js', 'js/ui.js', 'js/board.js', 'js/chess.js', 'js/pgn.js', 'js/engine.js', 'js/review.js',
+  'js/main.js', 'js/online-config.js', 'js/screens/online.js', 'js/ui.js', 'js/board.js', 'js/chess.js', 'js/pgn.js', 'js/engine.js', 'js/review.js',
   'js/comments.js', 'js/openings.js', 'js/notation.js', 'js/store.js', 'js/sound.js',
   'js/icons.js', 'js/progress.js', 'js/timecontrol.js',
   'js/screens/play.js', 'js/screens/analysis.js', 'js/screens/puzzles.js', 'js/screens/games.js', 'js/screens/profile.js',
