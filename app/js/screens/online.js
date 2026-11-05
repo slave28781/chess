@@ -1,9 +1,9 @@
-import { Chess } from '../chess.js';
+import { Chess, START_FEN } from '../chess.js';
 import { Board } from '../board.js';
-import { settings } from '../store.js';
+import { settings, games } from '../store.js';
 import { animationMs, formatClock, TIME_CONTROLS, CATEGORIES } from '../timecontrol.js';
 import { playSound, soundForMove } from '../sound.js';
-import { h, toast, confirmSheet, openSheet, segmented } from '../ui.js';
+import { h, toast, confirmSheet, openSheet, segmented, pgnDate } from '../ui.js';
 import { ONLINE_SERVER } from '../online-config.js';
 import { onlineProfile } from '../online-profile.js';
 
@@ -97,6 +97,13 @@ export function mountOnline(root) {
     const sound = previous > 0 && data.moves.length === previous + 1;
     if (!state || data.moves.length !== previous) viewedPly = null;
     state = data;
+    if (data.result && data.moves.length) {
+      const id = 'online-' + room;
+      if (!games.get(id)) {
+        const saved = games.save({ id, created: Date.now(), source: 'online', myColor: data.color, startFen: START_FEN, moves: game.history().map(m => ({ san: m.san, uci: m.uci })), result: data.result, reason: data.reason || null, notes: {}, headers: { Event: 'Онлайн-партия', Site: 'Шахматы', Date: pgnDate(), White: data.color === 'w' ? 'Вы' : 'Соперник', Black: data.color === 'b' ? 'Вы' : 'Соперник', Result: data.result } });
+        if (!saved) toast('Не удалось сохранить партию: проверьте память устройства');
+      }
+    }
     menu.style.display = data.started && !data.result ? 'none' : '';
     resign.style.display = data.started && !data.result ? '' : 'none';
     board.setOrientation(data.color);

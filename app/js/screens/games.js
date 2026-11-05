@@ -41,7 +41,7 @@ export function mountGames(root, { go }) {
         h('div', { class: `gi-res ${o.cls}`, title: o.label || '' }, o.cls ? (o.cls === 'win' ? '1' : '0') : o.text),
         h('div', { class: 'grow' },
           h('div', { class: 'gi-title' }, `${hd.White || 'Белые'} — ${hd.Black || 'Чёрные'}`),
-          h('div', { class: 'gi-sub' }, [g.opening, `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'ход' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'хода' : 'ходов'}`, dateStr(g.updated || g.created || Date.now())].filter(Boolean).join(' · '))),
+          h('div', { class: 'gi-sub' }, [g.source === 'online' ? 'Онлайн' : null, g.opening, `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'ход' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'хода' : 'ходов'}`, dateStr(g.updated || g.created || Date.now())].filter(Boolean).join(' · '))),
         acc !== null ? h('div', { class: 'gi-acc' }, h('b', {}, acc.toFixed(1) + '%'), 'точность') : h('div', { class: 'gi-acc' }, 'без', h('br'), 'разбора')));
     }
   }
