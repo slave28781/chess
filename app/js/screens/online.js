@@ -1,9 +1,9 @@
 import { Chess } from '../chess.js';
 import { Board } from '../board.js';
 import { settings } from '../store.js';
-import { animationMs, formatClock } from '../timecontrol.js';
+import { animationMs, formatClock, TIME_CONTROLS, CATEGORIES } from '../timecontrol.js';
 import { playSound, soundForMove } from '../sound.js';
-import { h, toast, confirmSheet } from '../ui.js';
+import { h, toast, confirmSheet, openSheet, segmented } from '../ui.js';
 import { ONLINE_SERVER } from '../online-config.js';
 import { onlineProfile } from '../online-profile.js';
 
@@ -30,20 +30,41 @@ export function mountOnline(root) {
   const resign = h('button', { class: 'btn btn-danger btn-block', onclick: async () => {
     if (await confirmSheet('Сдаться?', 'Партия завершится поражением.', 'Сдаться', true)) socket?.send(JSON.stringify({ type: 'resign' }));
   } }, 'Сдаться');
-  const timeChoice = h('select', { 'aria-label': 'Контроль времени' }, ...['1+0', '3+0', '3+2', '5+0', '5+3', '10+0', '10+5', '15+10'].map(t => h('option', { value: t, selected: t === '5+0' }, t)));
-  const sideChoice = h('select', { 'aria-label': 'Цвет фигур' }, h('option', { value: 'w' }, 'Белые'), h('option', { value: 'b' }, 'Чёрные'), h('option', { value: 'random' }, 'Случайный цвет'));
   let requestedTime = '5+0', requestedSide = 'w';
-  const create = h('button', { class: 'btn btn-primary btn-block', onclick: () => {
-    requestedTime = timeChoice.value; requestedSide = sideChoice.value;
+  const create = () => {
     room = randomHex(16);
     const url = new URL(location.href); url.searchParams.set('room', room); history.replaceState(null, '', url);
     connect();
-  } }, 'Создать партию');
+  };
+  function openMenu() {
+    openSheet((sheet, close) => {
+      const tcBox = h('div', { class: 'stack', style: { gap: '10px' } });
+      const supported = ['1+0', '3+0', '3+2', '5+0', '5+3', '10+0', '10+5', '15+10'];
+      const controls = [...TIME_CONTROLS, { id: '5+3', cat: 'blitz' }, { id: '10+5', cat: 'rapid' }];
+      function drawTc() {
+        tcBox.replaceChildren();
+        for (const cat of CATEGORIES) {
+          const options = controls.filter(t => t.cat === cat.id && supported.includes(t.id));
+          if (!options.length) continue;
+          const row = h('div', { class: 'tc-row' });
+          for (const t of options) row.append(h('button', { class: t.id === requestedTime ? 'on' : '', onclick: () => { requestedTime = t.id; drawTc(); } }, t.id));
+          tcBox.append(h('div', { class: 'tc-group' }, h('div', { class: 'tc-title' }, cat.icon, ' ', cat.name), row));
+        }
+      }
+      drawTc();
+      sheet.append(h('h2', {}, 'Игра с другом'), h('div', {}, h('div', { class: 'label' }, 'Время'), tcBox),
+        h('div', {}, h('div', { class: 'label' }, 'Играю'), segmented([['w', 'Белыми'], ['b', 'Чёрными'], ['random', 'Случайно']], requestedSide, value => { requestedSide = value; })),
+        h('button', { class: 'btn btn-primary btn-block', onclick: () => { close(); create(); } }, 'Создать партию'),
+        h('button', { class: 'btn btn-block', onclick: () => { close(); share.click(); } }, 'Скопировать приглашение'),
+        h('button', { class: 'btn btn-danger btn-block', onclick: () => { close(); resign.click(); } }, 'Сдаться'),
+        h('button', { class: 'btn btn-ghost btn-block', onclick: close }, 'Закрыть'));
+    });
+  }
   const strip = h('div', { class: 'moves-strip', 'aria-label': 'Ходы партии' });
   const prev = h('button', { class: 'history-arrow', 'aria-label': 'Предыдущий ход', onclick: () => navigate(-1) }, '‹');
   const next = h('button', { class: 'history-arrow', 'aria-label': 'Следующий ход', onclick: () => navigate(1) }, '›');
   function navigate(delta) { if (!state) return; viewedPly = Math.max(0, Math.min(state.moves.length, (viewedPly ?? state.moves.length) + delta)); drawPosition(false); }
-  const menu = h('details', { class: 'online-menu' }, h('summary', {}, 'Меню партии'), h('div', { class: 'stack online-menu-content' }, h('div', { class: 'label' }, 'Время'), timeChoice, h('div', { class: 'label' }, 'Ваш цвет'), sideChoice, create, share, resign));
+  const menu = h('button', { class: 'btn btn-block', onclick: openMenu }, 'Меню партии');
   const profile = onlineProfile(() => state && socket?.readyState === WebSocket.OPEN ? room : null, (id) => { room = id; const url = new URL(location.href); url.searchParams.set('room', room); history.replaceState(null, '', url); connect(); });
   root.append(profile.root, h('div', { class: 'history-bar' }, prev, strip, next), h('div', { class: 'online-status' }, title, status), clocks, h('div', { class: 'board-wrap full' }, board.root), menu);
   function drawPosition(animate) {
