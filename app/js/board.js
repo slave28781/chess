@@ -177,7 +177,11 @@ export class Board {
       } else {
         const o = this._create(t.code, t.sq);
         this._place(o, false);
-        if (animate) { o.el.classList.add('appear'); requestAnimationFrame(() => o.el.classList.remove('appear')); }
+        if (animate && this.animMs) {
+          o.el.classList.add('appear');
+          void o.el.offsetWidth;
+          requestAnimationFrame(() => o.el.classList.remove('appear'));
+        }
         next.push(o);
       }
     }
