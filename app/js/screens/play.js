@@ -170,7 +170,8 @@ export function mountPlay(root, { go, params = {} }) {
       const num = m.color === 'w' ? `${Math.floor(i / 2) + 1}.` : (i === 0 ? '1…' : '');
       strip.append(h('span', { class: 'mchip' + (i === (viewedPly ?? hist.length) - 1 ? ' cur' : '') }, num ? h('span', { class: 'num' }, num) : null, f(m.san)));
     });
-    strip.querySelector('.cur')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const current = strip.querySelector('.cur');
+    if (current) { strip.scrollTop = Math.max(0, current.offsetTop - strip.offsetTop - strip.clientHeight / 2); strip.scrollLeft = Math.max(0, current.offsetLeft - strip.offsetLeft - strip.clientWidth / 2); }
     historyPrev.disabled = (viewedPly ?? hist.length) <= 0;
     historyNext.disabled = (viewedPly ?? hist.length) >= hist.length;
   }

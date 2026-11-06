@@ -78,7 +78,8 @@ export function mountOnline(root) {
     board.setInteractive(ply === state.moves.length && socket?.readyState === WebSocket.OPEN && state.started && !state.result && state.turn === state.color ? state.color : null);
     board.setPosition(game, { lastMove: last && { from: last.from, to: last.to }, animate });
     prev.disabled = ply === 0; next.disabled = ply === state.moves.length;
-    strip.querySelector('.cur')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const current = strip.querySelector('.cur');
+    if (current) { strip.scrollTop = Math.max(0, current.offsetTop - strip.offsetTop - strip.clientHeight / 2); strip.scrollLeft = Math.max(0, current.offsetLeft - strip.offsetLeft - strip.clientWidth / 2); }
   }
   drawPosition(false);
   function drawClock() {

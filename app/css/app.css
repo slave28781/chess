@@ -513,3 +513,17 @@ body.game-active main#view { padding-bottom: calc(64px + env(safe-area-inset-bot
   #view[data-screen="online"] > .online-status, #view[data-screen="online"] > .row, #view[data-screen="online"] > .board-wrap { grid-column: 1; }
   #view[data-screen="online"] > .board-wrap { width: min(100%, calc(100dvh - 300px)); min-width: 0; justify-self: center; }
 }
+
+/* История не задаёт высоту игровой сетки; её прокрутка ограничена панелью. */
+@media (min-width: 700px) {
+  main#view[data-screen="play"], main#view[data-screen="online"], main#view[data-screen="analysis"] { position: relative; }
+  #view[data-screen="play"] > .history-bar, #view[data-screen="online"] > .history-bar { position: absolute; right: 20px; top: 0; width: min(210px, 24%); height: max(120px, calc(100dvh - 180px)); max-height: none; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) 40px; align-items: stretch; overflow: hidden; }
+  #view[data-screen="play"] > .history-bar .moves-strip, #view[data-screen="online"] > .history-bar .moves-strip { min-height: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+  #view[data-screen="play"] > .player:nth-child(2) { grid-row: 1; align-self: center; }
+  #view[data-screen="play"] > .board-wrap { grid-row: 2; width: min(100%, max(120px, calc(100dvh - 300px))); }
+  #view[data-screen="play"] > .player:nth-child(4) { grid-row: 3; align-self: center; }
+  #view[data-screen="play"] > .actions { grid-row: 4; }
+  #view[data-screen="analysis"] > .moves-strip { position: absolute; right: 20px; top: 0; width: min(210px, 24%); height: max(120px, calc(100dvh - 210px)); max-height: none; overflow-y: auto; overscroll-behavior: contain; }
+  #view[data-screen="analysis"] > .board-wrap { width: min(100%, max(120px, calc(100dvh - 300px))); }
+  #view[data-screen="online"] > .board-wrap { width: min(100%, max(120px, calc(100dvh - 340px))); }
+}
