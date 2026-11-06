@@ -475,3 +475,41 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); 
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .b-flash { display: none; }
 }
+
+/* Планшет: доска, игроки и ходы располагаются в одном поле зрения. */
+.game-navigation-toggle { display: none; }
+@media (min-width: 700px) {
+  body.game-active:not(.show-game-navigation) .tabbar { display: none; }
+  body.game-active .game-navigation-toggle { display: block; position: fixed; z-index: 40; right: max(12px, env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--text); }
+  body.game-active.show-game-navigation .game-navigation-toggle { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 12px); }
+  main#view[data-screen="play"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 210px); grid-template-rows: auto minmax(0, auto) auto auto; align-content: start; gap: 6px 14px; }
+  #view[data-screen="play"] > .history-bar { grid-column: 2; grid-row: 1 / 4; min-width: 0; align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) auto; max-height: calc(100dvh - 145px); }
+  #view[data-screen="play"] > .history-bar .moves-strip { grid-column: 1 / -1; grid-row: 1; align-content: start; display: flex; flex-wrap: wrap; overflow-y: auto; overflow-x: hidden; }
+  #view[data-screen="play"] > .history-bar .history-arrow { width: 100%; grid-row: 2; }
+  #view[data-screen="play"] > .player { grid-column: 1; }
+  #view[data-screen="play"] > .board-wrap { grid-column: 1; width: min(100%, calc(100dvh - 230px)); min-width: 0; justify-self: center; }
+  #view[data-screen="play"] > .actions { grid-column: 1; }
+  body.game-active #view[data-screen="play"] { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  #view[data-screen="analysis"] > .board-wrap { width: min(100%, calc(100dvh - 260px)); min-width: 0; }
+}
+
+/* Доступ к разделам во время партии остаётся и на телефоне. */
+body.game-active:not(.show-game-navigation) .tabbar { display: none; }
+body.game-active .game-navigation-toggle { display: block; position: fixed; z-index: 40; right: max(12px, env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--text); }
+body.game-active.show-game-navigation .game-navigation-toggle { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 12px); }
+body.game-active main#view { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+@media (min-width: 700px) {
+  #view[data-screen="analysis"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 210px); gap: 8px 14px; align-content: start; }
+  #view[data-screen="analysis"] > * { grid-column: 1 / -1; min-width: 0; }
+  #view[data-screen="analysis"] > .players-head { grid-column: 1; grid-row: 1; }
+  #view[data-screen="analysis"] > .board-wrap { grid-column: 1; grid-row: 2; width: min(100%, calc(100dvh - 230px)); min-width: 0; justify-self: center; }
+  #view[data-screen="analysis"] > .moves-strip { grid-column: 2; grid-row: 1 / 3; display: flex; flex-wrap: wrap; align-content: start; overflow-y: auto; overflow-x: hidden; max-height: calc(100dvh - 160px); }
+  #view[data-screen="analysis"] > .nav { grid-column: 1; grid-row: 3; }
+  #view[data-screen="online"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 210px); gap: 8px 14px; align-content: start; }
+  #view[data-screen="online"] > * { grid-column: 1 / -1; min-width: 0; }
+  #view[data-screen="online"] > .history-bar { grid-column: 2; grid-row: 2 / 5; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) auto; max-height: calc(100dvh - 180px); }
+  #view[data-screen="online"] > .history-bar .moves-strip { grid-column: 1 / -1; grid-row: 1; display: flex; flex-wrap: wrap; align-content: start; overflow-y: auto; overflow-x: hidden; }
+  #view[data-screen="online"] > .history-bar .history-arrow { grid-row: 2; width: 100%; }
+  #view[data-screen="online"] > .online-status, #view[data-screen="online"] > .row, #view[data-screen="online"] > .board-wrap { grid-column: 1; }
+  #view[data-screen="online"] > .board-wrap { width: min(100%, calc(100dvh - 300px)); min-width: 0; justify-self: center; }
+}

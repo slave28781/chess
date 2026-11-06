@@ -176,6 +176,8 @@ export function mountPlay(root, { go, params = {} }) {
   }
 
   function render(animate = true) {
+    document.body.classList.toggle('game-active', !state.result);
+    if (state.result) document.body.classList.remove('show-game-navigation');
     board.setAnimation(animationMs(settings.get().animation, tc().cat));
     const hist = chess.history();
     const ply = Math.min(viewedPly ?? hist.length, hist.length);
@@ -490,7 +492,7 @@ export function mountPlay(root, { go, params = {} }) {
   }
 
   return {
-    destroy() {
+    destroy() { document.body.classList.remove('game-active', 'show-game-navigation');
       destroyed = true;
       token++;
       pauseClock();

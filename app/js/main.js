@@ -21,6 +21,8 @@ const TABS = [
 
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabs');
+const gameNavigation = h('button', { class: 'game-navigation-toggle', 'aria-label': 'Открыть разделы', onclick: () => document.body.classList.toggle('show-game-navigation') }, '☰ Разделы');
+document.body.append(gameNavigation);
 const ratingBtn = h('button', { class: 'rating-badge', 'aria-label': 'Ваш рейтинг', onclick: () => go('profile') });
 let current = null;
 let currentTab = null;
@@ -56,6 +58,8 @@ export function go(tab, params = {}) {
   const entry = TABS.find((t) => t[0] === tab) || TABS[0];
   if (current) current.destroy();
   currentTab = entry[0];
+  view.dataset.screen = currentTab;
+  document.body.classList.remove('game-active', 'show-game-navigation');
   view.innerHTML = '';
   view.scrollTop = 0;
   window.scrollTo(0, 0);
