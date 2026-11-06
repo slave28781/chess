@@ -97,6 +97,8 @@ export function mountOnline(root) {
     const sound = previous > 0 && data.moves.length === previous + 1;
     if (!state || data.moves.length !== previous) viewedPly = null;
     state = data;
+    document.body.classList.toggle('game-active', !!data.started && !data.result);
+    if (data.result) document.body.classList.remove('show-game-navigation');
     if (data.result && data.moves.length) {
       const id = 'online-' + room;
       if (!games.get(id)) {
@@ -128,5 +130,5 @@ export function mountOnline(root) {
   }
   timer = setInterval(drawClock, 200);
   if (room) connect();
-  return { refresh() { board.setAnimation(animationMs(settings.get().animation)); board.setCoords(settings.get().coords); }, destroy() { profile.destroy(); destroyed = true; clearInterval(timer); clearTimeout(reconnect); socket?.close(); } };
+  return { refresh() { board.setAnimation(animationMs(settings.get().animation)); board.setCoords(settings.get().coords); }, destroy() { document.body.classList.remove('game-active', 'show-game-navigation'); profile.destroy(); destroyed = true; clearInterval(timer); clearTimeout(reconnect); socket?.close(); } };
 }
