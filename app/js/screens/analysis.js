@@ -39,6 +39,7 @@ export function mountAnalysis(root, { go, params = {} }) {
   let noteTimer = null;
   let fxToken = 0;
   let shownPly = null;
+  let moveEvalToken = 0, evaluatingMove = false;
 
   const board = new Board(h('div'), { onMove: (m, o) => boardMove(m, o) });
   const evalBar = new EvalBar();
@@ -103,6 +104,7 @@ export function mountAnalysis(root, { go, params = {} }) {
   function boardMove(m, { animate }) {
     if (!record || reviewing) return;
     const c = chessAt();
+    const beforeFen = c.fen();
     const mv = c.move(m);
     if (!mv) return;
     playSound(soundForMove(mv, c));
@@ -117,6 +119,25 @@ export function mountAnalysis(root, { go, params = {} }) {
       variation.idx++;
     }
     render({ animate });
+    if ((variation && variation.moves[variation.idx - 1] === step) || (record.source === 'free' && record.moves[ply] === step)) evaluateMove(beforeFen, step);
+  }
+
+  async function evaluateMove(beforeFen, step) {
+    const token = ++moveEvalToken;
+    evaluatingMove = true;
+    await stopLive();
+    try {
+      const engine = await getEngine();
+      if (token !== moveEvalToken || destroyed) return;
+      const result = await reviewGame(engine, { startFen: beforeFen, moves: [step] }, { depth: DEPTHS[settings.get().depth] || Number(settings.get().depth) || 14, shouldStop: () => token !== moveEvalToken || destroyed });
+      if (token !== moveEvalToken || destroyed) return;
+      step.evaluation = result.moves[0];
+      const current = variation ? variation.moves[variation.idx - 1] : record?.moves[ply];
+      if (current === step) render({ animate: true });
+    } catch (e) { if (token === moveEvalToken && !destroyed) toast('Не удалось оценить ход'); }
+    finally {
+      if (token === moveEvalToken) { evaluatingMove = false; if (!destroyed && needsLive()) startLive(); }
+    }
   }
 
   // ---------- Навигация ----------
@@ -353,11 +374,12 @@ export function mountAnalysis(root, { go, params = {} }) {
     board.setPosition(c, { lastMove: lastMoveOf(c), animate });
     board.setInteractive(reviewing ? null : 'both');
     board.setCoords(settings.get().coords);
-    const r = !variation && data && ply >= 0 ? data.moves[ply] : null;
+    const r = variation ? variation.moves[variation.idx - 1]?.evaluation : (data && ply >= 0 ? data.moves[ply] : record.source === 'free' && ply >= 0 ? record.moves[ply]?.evaluation : null);
     const badge = r ? { square: r.uci.slice(2, 4), html: classIconSvg(r.cls), title: CLASSES[r.cls].label } : null;
     const fx = ++fxToken;
-    const shine = r && animate && shownPly !== ply && (r.cls === 'brilliant' || r.cls === 'great');
-    shownPly = variation ? null : ply;
+    const moveKey = variation ? variation.moves[variation.idx - 1] : record.moves[ply];
+    const shine = r && animate && shownPly !== moveKey && (r.cls === 'brilliant' || r.cls === 'great');
+    shownPly = r ? moveKey : null;
     if (shine) {
       // Сначала фигура встаёт на место, потом вспышка и звук, и только потом — значок.
       board.setBadge(null);
@@ -421,7 +443,8 @@ export function mountAnalysis(root, { go, params = {} }) {
     if (curChip) curChip.parentElement.scrollLeft = curChip.offsetLeft - curChip.parentElement.clientWidth / 2 + curChip.clientWidth / 2;
 
     updateEvalBar();
-    if (!needsLive()) stopLive();
+    if (evaluatingMove) { /* оценка хода использует движок */ }
+    else if (!needsLive()) stopLive();
     else if (live.running && live.fen === c.fen()) updateLive(); // та же позиция — анализ уже идёт
     else startLive();
   }
@@ -682,6 +705,7 @@ export function mountAnalysis(root, { go, params = {} }) {
       destroyed = true;
       window.removeEventListener('keydown', onKey);
       if (reviewing) reviewing.cancel();
+      moveEvalToken++;
       stopLive();
     },
     refresh() { render({ animate: false }); },
