@@ -28,6 +28,7 @@ const svg = (body, vb = '0 0 24 24') => `<svg viewBox="${vb}" fill="none" stroke
 
 export const ICONS = {
   play: svg('<path d="M8 21h8M9 21l1-5c-2-1-3-3-3-5 0-3 2.5-6 6-6l1 2h1.5L16 9l-2 1"/><path d="M13.5 5 15 3"/>'),
+  pause: svg('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>'),
   analysis: svg('<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>'),
   online: svg('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 14a5 5 0 0 1 5 5v1"/>'),
   puzzles: svg('<path d="M19.4 14.6a2.6 2.6 0 0 0 0-5.2H18V6a2 2 0 0 0-2-2h-3.4v-1.4a2.6 2.6 0 0 0-5.2 0V4H4a1 1 0 0 0-1 1v3.4h1.4a2.6 2.6 0 0 1 0 5.2H3V18a2 2 0 0 0 2 2h3.4v-1.4a2.6 2.6 0 0 1 5.2 0V20H16a2 2 0 0 0 2-2v-3.4z"/>'),
