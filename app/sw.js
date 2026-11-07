@@ -1,14 +1,15 @@
 // Офлайн-режим. Код приложения: сначала сеть (обновления приходят сразу), без сети — кэш.
 // cache: 'no-cache' — браузер сверяется с сайтом каждый раз, а не берёт файл из своего кэша на 10 минут.
 // Движок и фигуры не меняются: сначала кэш, чтобы 7 МБ не качались каждый раз.
-const CACHE = 'chess-v9';
+const CACHE = 'chess-v10';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/main.js', 'js/online-config.js', 'js/online-profile.js', 'js/screens/online.js', 'js/ui.js', 'js/board.js', 'js/chess.js', 'js/pgn.js', 'js/engine.js', 'js/review.js',
   'js/comments.js', 'js/openings.js', 'js/notation.js', 'js/store.js', 'js/sound.js',
   'js/icons.js', 'js/progress.js', 'js/timecontrol.js',
-  'js/screens/play.js', 'js/screens/analysis.js', 'js/screens/puzzles.js', 'js/screens/themed-puzzles.js', 'js/screens/games.js', 'js/screens/profile.js',
+  'js/screens/play.js', 'js/screens/analysis.js', 'js/screens/puzzles.js', 'js/screens/themed-puzzles.js', 'js/screens/learn.js', 'js/screens/games.js', 'js/screens/profile.js',
   'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
+  ...['ivory', 'marble', 'royal', 'copper', 'ocean'].flatMap((skin) => ['w', 'b'].flatMap((c) => ['K', 'Q', 'R', 'B', 'N', 'P'].map((p) => `pieces/${skin}/${c}${p}.svg`))),
   ...['w', 'b'].flatMap((c) => ['K', 'Q', 'R', 'B', 'N', 'P'].map((p) => `pieces/${c}${p}.svg`)),
 ];
 const STATIC = ['engine/stockfish-18-lite-single.js', 'engine/stockfish-18-lite-single.wasm'];

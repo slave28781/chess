@@ -13,6 +13,7 @@ const KEYS = {
 export const DEFAULT_SETTINGS = {
   notation: 'en',
   theme: 'green',
+  pieceSkin: 'classic',
   sound: true,
   coords: true,
   depth: 14,

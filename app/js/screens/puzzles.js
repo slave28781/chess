@@ -1,5 +1,6 @@
 // Экран «Задачи»: позиции из ваших же ошибок — найдите ход лучше, чем был сыгран.
 import { Chess } from '../chess.js';
+import { mountLearn } from './learn.js';
 import { mountThemedPuzzles } from './themed-puzzles.js';
 import { Board } from '../board.js';
 import { CLASSES, toWhitePov, winFor } from '../review.js';
@@ -35,6 +36,7 @@ export function mountPuzzles(root, { go }) {
   function render(animate = true) {
     if (destroyed) return;
     root.innerHTML = '';
+    root.append(h('button', { class: 'btn btn-primary btn-block learn-enter', onclick: () => { token++; themed = mountLearn(root, () => { themed = null; render(false); }); } }, 'Шахматная школа'));
     root.append(h('button', { class: 'btn btn-block', onclick: () => { token++; themed = mountThemedPuzzles(root, () => { themed = null; render(false); }); } }, icon('puzzles'), 'Тематические задачи'));
     const st = stats();
     if (!st.total) {

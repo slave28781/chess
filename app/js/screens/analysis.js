@@ -39,6 +39,7 @@ export function mountAnalysis(root, { go, params = {} }) {
   let noteTimer = null;
   let fxToken = 0;
   let shownPly = null;
+  let highlightUntil = 0;
   let moveEvalToken = 0, evaluatingMove = false;
 
   const board = new Board(h('div'), { onMove: (m, o) => boardMove(m, o) });
@@ -102,7 +103,7 @@ export function mountAnalysis(root, { go, params = {} }) {
 
   // ---------- Ввод хода на доске ----------
   function boardMove(m, { animate }) {
-    if (!record || reviewing) return;
+    if (!record || reviewing || Date.now() < highlightUntil) return;
     const c = chessAt();
     const beforeFen = c.fen();
     const mv = c.move(m);
@@ -142,7 +143,7 @@ export function mountAnalysis(root, { go, params = {} }) {
 
   // ---------- Навигация ----------
   function nav(where) {
-    if (!record) return;
+    if (!record || Date.now() < highlightUntil) return;
     if (variation) {
       if (where === 'prev') { variation.idx--; if (variation.idx <= 0) { ply = variation.basePly; variation = null; } }
       else if (where === 'next') variation.idx = Math.min(variation.moves.length, variation.idx + 1);
@@ -161,6 +162,7 @@ export function mountAnalysis(root, { go, params = {} }) {
   }
 
   function goPly(p, { scrollToBoard = false } = {}) {
+    if (Date.now() < highlightUntil) return;
     variation = null;
     ply = p;
     const c = chessAt();
@@ -175,6 +177,7 @@ export function mountAnalysis(root, { go, params = {} }) {
 
   // Показать лучшую линию движка как вариант от позиции перед ходом.
   function showBestLine(r) {
+    if (Date.now() < highlightUntil) return;
     const ev = record.review.evals[r.ply];
     const pv = ev.lines[0] ? ev.lines[0].pv : [ev.bestMove];
     const c = new Chess(r.fenBefore);
@@ -370,7 +373,8 @@ export function mountAnalysis(root, { go, params = {} }) {
     root.append(playersHead());
 
     // Доска
-    board.setAnimation(animationMs(settings.get().animation));
+    const selectedAnimation = animationMs(settings.get().animation);
+    board.setAnimation(selectedAnimation ? Math.max(100, Math.min(selectedAnimation, 180)) : 0);
     board.setPosition(c, { lastMove: lastMoveOf(c), animate });
     board.setInteractive(reviewing ? null : 'both');
     board.setCoords(settings.get().coords);
@@ -381,11 +385,12 @@ export function mountAnalysis(root, { go, params = {} }) {
     const shine = r && animate && shownPly !== moveKey && (r.cls === 'brilliant' || r.cls === 'great');
     shownPly = r ? moveKey : null;
     if (shine) {
-      // Сначала фигура встаёт на место, потом вспышка и звук, и только потом — значок.
+      // Пока воспроизводится эффект, переход к другому ходу заблокирован.
       board.setBadge(null);
-      const ms = board.animMs || 0;
-      setTimeout(() => { if (fx !== fxToken || destroyed) return; board.flash(badge.square, CLASSES[r.cls].color); playSound(r.cls); }, ms + 40);
-      setTimeout(() => { if (fx !== fxToken || destroyed) return; board.setBadge(badge); }, ms + 520);
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const delay = reduced ? 0 : 150;
+      highlightUntil = Date.now() + (reduced ? 0 : 1050);
+      setTimeout(() => { if (fx !== fxToken || destroyed) return; board.setBadge(badge); if (!reduced) board.flash(badge.square, CLASSES[r.cls].color); playSound(r.cls); }, delay);
     } else {
       board.setBadge(badge);
     }
