@@ -1,3 +1,4 @@
+import { trainingCard, trainingHeader } from '../training-ui.js';
 import { Chess } from '../chess.js';
 import { Board } from '../board.js';
 import { settings } from '../store.js';
@@ -31,10 +32,10 @@ export function mountThemedPuzzles(root, onBack) {
   } });
   function draw(animate = false) {
     root.replaceChildren();
-    root.append(h('button', { class: 'btn btn-block', onclick: () => { if (selected) { selected = null; draw(); } else onBack(); } }, icon('prev'), selected ? 'К наборам' : 'Мои задачи'));
+    root.append(h('button', { class: 'btn btn-block', onclick: () => { if (selected) { selected = null; draw(); } else onBack(); } }, icon('prev'), selected ? 'К наборам' : 'К тренировкам'));
     if (!selected) {
-      root.append(h('div', { class: 'card' }, h('h2', {}, 'Тематические задачи'), h('p', {}, 'Небольшие наборы для тренировки тактики.')));
-      for (const set of SETS) root.append(h('button', { class: 'game-item', onclick: () => { selected = set; index = 0; done = false; message = ''; draw(); } }, h('div', { class: 'grow' }, h('div', { class: 'gi-title' }, set.title), h('div', { class: 'gi-sub' }, `${set.positions.length} задачи · ${set.description}`)), icon('next')));
+      root.append(trainingHeader('Тактика', 'Увидеть угрозу. Найти точный ход.'), h('div', { class: 'training-grid training-enter' },
+        ...SETS.map(set => trainingCard({ title: set.title, description: set.description, kind: 'tactics', count: `${set.positions.length} задачи`, fen: set.positions[0][0], onclick: () => { selected = set; index = 0; done = false; message = ''; draw(); } }))));
       return;
     }
     const [fen, answer] = selected.positions[index], game = new Chess(fen);
@@ -47,5 +48,5 @@ export function mountThemedPuzzles(root, onBack) {
       h('button', { class: 'action', onclick: () => { index = (index + 1) % selected.positions.length; done = false; message = ''; draw(); } }, icon('next'), 'Следующая')));
   }
   draw();
-  return { destroy() {} };
+  return { destroy() { board.setInteractive(null); }, refresh() { draw(false); } };
 }
