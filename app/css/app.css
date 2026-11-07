@@ -648,7 +648,33 @@ main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; -
 .opening-position-card { display: grid; gap: 7px; }
 .opening-position-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: #b8c6d2; }
 .opening-position-meta b { color: #e4e9ef; font-variant-numeric: tabular-nums; flex: none; }
-.board-wrap.opening-board { margin: 0 auto; max-width: min(100%, 520px); }
+/* Ширина обязательна: flex-обёртка с абсолютными дочерними элементами
+   без неё схлопывается до нуля на мобильном Safari. */
+.board-wrap.opening-board {
+  width: min(100%, 520px);
+  min-width: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  align-self: center;
+  flex: 0 0 auto;
+}
+.opening-board > .board {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  flex: none;
+  min-height: 0;
+}
+.opening-board-guide {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--training-muted, var(--muted));
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 0 3px;
+}
+.opening-board-guide strong { color: #cee2f0; }
 .opening-moves {
   display: flex; gap: 6px; padding: 6px 2px; overflow-x: auto; scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch; scrollbar-width: thin;
