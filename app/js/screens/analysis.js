@@ -177,6 +177,7 @@ export function mountAnalysis(root, { go, params = {} }) {
 
   // Показать лучшую линию движка как вариант от позиции перед ходом.
   function showBestLine(r) {
+    if (Date.now() < highlightUntil) return;
     const ev = record.review.evals[r.ply];
     const pv = ev.lines[0] ? ev.lines[0].pv : [ev.bestMove];
     const c = new Chess(r.fenBefore);

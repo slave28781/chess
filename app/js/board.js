@@ -1,3 +1,4 @@
+import { settings } from './store.js';
 // Доска: фигуры с анимацией, ходы тапом и перетаскиванием, подсветки, стрелки, значки силы хода.
 // Доска не меняет партию сама: сообщает о ходе через onMove, хозяин партии вызывает setPosition.
 
@@ -124,7 +125,9 @@ export class Board {
   }
 
   _pieceUrl(code) {
-    return `${this.pieceBase}${code[0]}${code[1].toUpperCase()}.svg`;
+    const skin = settings.get().pieceSkin;
+    const folder = ['ivory', 'marble', 'royal', 'copper', 'ocean'].includes(skin) ? skin + '/' : '';
+    return `${this.pieceBase}${folder}${code[0]}${code[1].toUpperCase()}.svg`;
   }
 
   _create(code, sq) {
@@ -150,6 +153,7 @@ export class Board {
   }
 
   _renderPieces(animate) {
+    for (const piece of this.pieceEls) piece.el.style.backgroundImage = `url("${this._pieceUrl(piece.code)}")`;
     const target = this.chess.pieces().map((p) => ({ sq: p.square, code: p.color + p.type }));
     const old = this.pieceEls;
     const used = new Set();

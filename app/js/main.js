@@ -96,6 +96,7 @@ function settingsSheet() {
         segmented([['auto', 'Авто'], ['slow', 'Медл.'], ['normal', 'Обычн.'], ['fast', 'Быстро'], ['off', 'Нет']], s.animation, (v) => { settings.set({ animation: v }); current?.refresh?.(); }),
         h('div', { class: 'muted small', style: { marginTop: '6px' } }, 'Авто: в пуле мгновенно, в блице быстро, в рапиде и без часов — плавно.')),
       h('div', {}, h('div', { class: 'label' }, 'Доска · новые стили открываются наградами'), sw),
+      h('div', {}, h('div', { class: 'label' }, 'Фигуры'), segmented([['classic', 'Классика'], ['ivory', 'Слоновая кость'], ['marble', 'Мрамор']], ['classic', 'ivory', 'marble'].includes(s.pieceSkin) ? s.pieceSkin : '', v => { settings.set({ pieceSkin: v }); current?.refresh?.(); close(); settingsSheet(); }), segmented([['royal', 'Королевские'], ['copper', 'Медь'], ['ocean', 'Океан']], s.pieceSkin, v => { settings.set({ pieceSkin: v }); current?.refresh?.(); close(); settingsSheet(); })),
       h('div', { class: 'toggle-row' }, h('span', {}, 'Звуки'), switchEl(s.sound, (v) => { settings.set({ sound: v }); applySettings(); if (v) playSound('move'); })),
       h('div', { class: 'toggle-row' }, h('span', {}, 'Координаты на доске'), switchEl(s.coords, (v) => { settings.set({ coords: v }); current?.refresh?.(); })),
       h('button', {

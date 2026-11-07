@@ -527,3 +527,14 @@ body.game-active main#view { padding-bottom: calc(64px + env(safe-area-inset-bot
   #view[data-screen="analysis"] > .board-wrap { width: min(100%, max(120px, calc(100dvh - 300px))); }
   #view[data-screen="online"] > .board-wrap { width: min(100%, max(120px, calc(100dvh - 340px))); }
 }
+
+/* Спокойное появление учебных карточек. */
+.learn-enter { animation: learnEnter .32s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes learnEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .learn-enter { animation: none; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .game-item, .card, .move-card { animation: learnEnter .24s ease-out both; }
+  .btn, .action { transition: transform .18s ease, background .18s ease; }
+  .action:active { transform: scale(.97); }
+}
