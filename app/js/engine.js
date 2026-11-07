@@ -41,6 +41,7 @@ export function workerTransport(url) {
 }
 
 const ANALYSIS_OPTIONS = { UCI_LimitStrength: 'false', 'Skill Level': 20 };
+const ENGINE_HASH_MB = 16; // Ограничиваем память движка на мобильных устройствах.
 
 export class Engine {
   constructor(transport, { initTimeout = 60000 } = {}) {
@@ -75,6 +76,7 @@ export class Engine {
     this.name = (await Promise.race([nameLine, ok.then(() => 'id name Stockfish')])).slice(8);
     await ok;
     await this._isReady();
+    await this._setOptions({ Hash: ENGINE_HASH_MB });
   }
 
   async _isReady() {
@@ -101,8 +103,12 @@ export class Engine {
    * Анализ позиции. → { bestMove, lines: [{ multipv, depth, score (от ходящего), pv }] }
    * onInfo(lines) вызывается по мере углубления — для живого анализа.
    */
-  analyse(fen, { depth, movetime, multipv = 1, options = ANALYSIS_OPTIONS, onInfo } = {}) {
-    return this._enqueue(() => this._search(fen, { depth, movetime, multipv, options, onInfo }));
+  analyse(fen, { depth, movetime, multipv = 1, options = ANALYSIS_OPTIONS, onInfo, shouldSkip } = {}) {
+    // Навигация по позициям может породить очередь устаревших анализов.
+    // Пропускаем их до запуска Stockfish, не расходуя время телефона.
+    return this._enqueue(() => shouldSkip?.()
+      ? { bestMove: null, lines: [] }
+      : this._search(fen, { depth, movetime, multipv, options, onInfo }));
   }
 
   async _search(fen, { depth, movetime, multipv, options, onInfo }) {
@@ -156,11 +162,14 @@ export class Engine {
   }
 }
 
-// Уровни игры. Первые три — свой «ослабитель»: случайный выбор из нескольких неплохих ходов.
+// Ниже 1320 Elo у Stockfish нет нативной калибровки по UCI_Elo.
+// Для новичков выбираем кандидатов из гораздо более широкого MultiPV,
+// с разной частотой неточностей и зевков. Рейтинг остаётся ориентировочным:
+// точное соответствие Chess.com возможно только после игровых измерений.
 export const LEVELS = [
-  { id: 1, name: 'Пешка', note: '≈ 400', kind: 'random', depth: 2, multipv: 8, window: 600 },
-  { id: 2, name: 'Конь', note: '≈ 700', kind: 'random', depth: 4, multipv: 6, window: 250 },
-  { id: 3, name: 'Слон', note: '≈ 1000', kind: 'random', depth: 7, multipv: 4, window: 120 },
+  { id: 1, name: 'Пешка', note: '≈ 400', kind: 'novice', depth: 2, multipv: 24, movetime: 700, mistakeRate: 0.35, blunderRate: 0.40 },
+  { id: 2, name: 'Конь', note: '≈ 700', kind: 'novice', depth: 3, multipv: 18, movetime: 800, mistakeRate: 0.40, blunderRate: 0.10 },
+  { id: 3, name: 'Слон', note: '≈ 1000', kind: 'novice', depth: 5, multipv: 12, movetime: 900, mistakeRate: 0.22, blunderRate: 0.03 },
   { id: 4, name: 'Ладья', note: '≈ 1350', kind: 'elo', elo: 1350, movetime: 400 },
   { id: 5, name: 'Ферзь', note: '≈ 1650', kind: 'elo', elo: 1650, movetime: 500 },
   { id: 6, name: 'Король', note: '≈ 1950', kind: 'elo', elo: 1950, movetime: 600 },
@@ -170,24 +179,39 @@ export const LEVELS = [
 
 const scoreValue = (s) => (s.mate !== undefined ? (s.mate > 0 ? 100000 - s.mate : -100000 - s.mate) : s.cp);
 
-// Выбор хода движком на уровне level. random — для тестов можно подменить.
+// Ошибка — падение оценки в сантипешках, по отношению к сильнейшему кандидату.
+// Выбираем группу, а затем случайный ход внутри неё. Если такой группы
+// в позиции нет, берём ближайшую по качеству, а не ломаем законность хода.
+export function chooseNoviceCandidate(lines, level, random = Math.random) {
+  const sorted = lines.filter((line) => line.pv?.[0] && line.score).sort((a, b) => a.multipv - b.multipv);
+  if (!sorted.length) return null;
+  const best = Math.max(...sorted.map((l) => scoreValue(l.score)));
+  const groups = [[], [], []]; // хороший, ошибка, зевок
+  for (const line of sorted) {
+    const loss = Math.max(0, best - scoreValue(line.score));
+    groups[loss <= 80 ? 0 : loss <= 250 ? 1 : 2].push(line);
+  }
+  const roll = random();
+  const target = roll < level.blunderRate ? 2
+    : roll < level.blunderRate + level.mistakeRate ? 1 : 0;
+  const nearest = [0, 1, 2].sort((a, b) => Math.abs(a - target) - Math.abs(b - target));
+  const selected = groups[nearest.find((i) => groups[i].length)];
+  return selected[Math.min(selected.length - 1, Math.floor(random() * selected.length))].pv[0];
+}
+
+// Выбор хода движком на уровне level. random — для детерминированных тестов.
 // budgetMs — сколько можно думать при игре на время (иначе — время уровня).
 export async function chooseMove(engine, fen, level, random = Math.random, budgetMs = null) {
-  if (level.kind === 'random') {
-    const res = await engine.analyse(fen, { depth: level.depth, multipv: level.multipv });
-    if (!res.lines.length) return res.bestMove;
-    const best = scoreValue(res.lines[0].score);
-    const pool = res.lines.filter((l) => best - scoreValue(l.score) <= level.window);
-    // Чуть чаще выбираем ходы получше: вес убывает с номером линии.
-    const weights = pool.map((_, i) => 1 / (i + 1.5));
-    let x = random() * weights.reduce((a, b) => a + b, 0);
-    for (let i = 0; i < pool.length; i++) { x -= weights[i]; if (x <= 0) return pool[i].pv[0]; }
-    return pool[0].pv[0];
+  const movetime = budgetMs === null ? level.movetime : Math.max(30, Math.min(level.movetime, budgetMs));
+  if (level.kind === 'novice') {
+    const res = await engine.analyse(fen, {
+      depth: level.depth, movetime, multipv: level.multipv, options: ANALYSIS_OPTIONS,
+    });
+    return chooseNoviceCandidate(res.lines, level, random) || res.bestMove;
   }
   const options = level.kind === 'elo'
     ? { UCI_LimitStrength: 'true', UCI_Elo: level.elo, 'Skill Level': 20 }
     : ANALYSIS_OPTIONS;
-  const movetime = budgetMs ? Math.max(30, Math.min(level.movetime, budgetMs)) : level.movetime;
   const res = await engine.analyse(fen, { movetime, multipv: 1, options });
   return res.bestMove;
 }

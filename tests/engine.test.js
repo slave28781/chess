@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { Engine, LEVELS, chooseMove, parseInfo } from '../app/js/engine.js';
+import { Engine, LEVELS, chooseMove, chooseNoviceCandidate, parseInfo } from '../app/js/engine.js';
 import { Chess } from '../app/js/chess.js';
 import { reviewGame } from '../app/js/review.js';
 import { parsePgn } from '../app/js/pgn.js';
@@ -28,6 +28,35 @@ test('разбор строки info', () => {
   assert.deepEqual(i, { multipv: 2, depth: 12, seldepth: 18, score: { mate: -3 }, nodes: 100, nps: 5, time: 20, pv: ['e2e4', 'e7e5'] });
   assert.equal(parseInfo('info depth 5 score cp 10 upperbound pv e2e4').bound, 'upperbound');
   assert.equal(parseInfo('info string NNUE evaluation using nn.nnue'), null);
+});
+
+test('новички выбирают хорошие, неточные и грубые ходы по профилю', () => {
+  const lines = [
+    { multipv: 1, score: { cp: 100 }, pv: ['e2e4'] },
+    { multipv: 2, score: { cp: 55 }, pv: ['d2d4'] },
+    { multipv: 3, score: { cp: -20 }, pv: ['g1f3'] },
+    { multipv: 4, score: { cp: -450 }, pv: ['a2a3'] },
+  ];
+  const level = LEVELS[0];
+  assert.equal(chooseNoviceCandidate(lines, level, () => 0), 'a2a3', 'начинающий иногда грубо ошибается');
+  assert.equal(chooseNoviceCandidate(lines, level, () => 0.5), 'g1f3', 'может сыграть неточно');
+  assert.equal(chooseNoviceCandidate(lines, level, () => 0.95), 'd2d4', 'иногда находит хороший ход');
+  assert.equal(chooseNoviceCandidate([], level), null);
+});
+
+test('начинающие имеют разные частоты ошибок и ограничение времени', async () => {
+  const calls = [];
+  const fake = { analyse: async (_fen, settings) => {
+    calls.push(settings);
+    return { bestMove: 'e2e4', lines: [{ multipv: 1, score: { cp: 10 }, pv: ['e2e4'] }] };
+  } };
+  for (const level of LEVELS.slice(0, 3)) {
+    assert.equal(await chooseMove(fake, new Chess().fen(), level, () => 0.99, 120), 'e2e4');
+  }
+  assert.deepEqual(calls.map((c) => c.movetime), [120, 120, 120]);
+  assert.deepEqual(calls.map((c) => c.multipv), [24, 18, 12]);
+  assert.ok(LEVELS[0].blunderRate > LEVELS[1].blunderRate);
+  assert.ok(LEVELS[1].blunderRate > LEVELS[2].blunderRate);
 });
 
 test('движок запускается и анализирует с MultiPV', async () => {
