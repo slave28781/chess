@@ -72,3 +72,13 @@ test('academy lesson contents remain completely self-contained, with no network 
   assert.ok(text.includes('c5'));
   assert.ok(!/https?:\/\//.test(text));
 });
+
+
+test('opening lesson screens import without syntax errors', async () => {
+  const [{ mountGuidedOpening }, { mountLearn }] = await Promise.all([
+    import('../app/js/screens/guided-opening.js'),
+    import('../app/js/screens/learn.js'),
+  ]);
+  assert.equal(typeof mountGuidedOpening, 'function');
+  assert.equal(typeof mountLearn, 'function');
+});
