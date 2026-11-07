@@ -598,3 +598,94 @@ main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; -
   .training-grid .training-card, .training-grid .training-featured { grid-template-columns: 100px minmax(0, 1fr) 24px; align-items: center; }
   .training-grid .training-card > .training-art { grid-column: 1; width: 100px; }
 }
+
+
+/* Академия дебютов: адаптивные уроки, плавная навигация и интерактивные тренировки. */
+.opening-hero, .opening-principles, .opening-lesson-head, .opening-explanation, .opening-branches {
+  background: var(--training-panel, var(--surface, #252a32));
+  border: 1px solid #3b4651;
+  border-radius: 18px;
+  padding: clamp(15px, 4vw, 22px);
+}
+.opening-hero { display: grid; gap: 11px; }
+.opening-hero h2, .opening-lesson-head h2 {
+  margin: 0; font-size: clamp(23px, 5vw, 32px); line-height: 1.15; letter-spacing: -.035em;
+}
+.opening-hero p, .opening-lesson-head p, .opening-explanation p {
+  color: var(--training-muted, var(--muted)); line-height: 1.65; margin: 0;
+}
+.opening-kicker { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .095em; color: #9ed1ff; }
+.opening-progress-track { height: 6px; overflow: hidden; border-radius: 6px; background: #35414a; }
+.opening-progress-track span { height: 100%; display: block; background: #8cca90; border-radius: inherit; transition: width .35s ease; }
+.opening-principles { display: grid; gap: 12px; }
+.opening-principles h3, .opening-branches h3 { margin: 0 0 4px; font-size: 17px; }
+.opening-principle { display: flex; gap: 12px; align-items: flex-start; }
+.opening-principle > b {
+  display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px;
+  border-radius: 9px; background: #354b51; color: #cbe9d4; font-size: 12px;
+}
+.opening-principle p { margin: 0; color: var(--training-muted, var(--muted)); line-height: 1.55; font-size: 14px; }
+.opening-chapters { display: grid; gap: 10px; }
+.opening-chapter, .opening-branch {
+  appearance: none; border: 1px solid #3b4651; background: var(--training-panel, #252a32);
+  color: inherit; border-radius: 15px; text-align: left; width: 100%;
+  padding: 15px; display: flex; gap: 12px; align-items: center;
+  transition: border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+.opening-chapter:hover, .opening-branch:hover, .opening-chapter:focus-visible, .opening-branch:focus-visible { border-color: #9ac5ec; }
+.opening-chapter:active, .opening-branch:active { transform: scale(.992); }
+.opening-chapter-num {
+  display: grid; place-items: center; width: 39px; height: 39px; flex: 0 0 39px;
+  border-radius: 12px; background: #34404c; color: #b2d8fc; font-weight: 850;
+}
+.opening-chapter-body { display: grid; gap: 5px; min-width: 0; flex: 1; }
+.opening-chapter-body strong { font-size: 15px; }
+.opening-chapter-body small { font-size: 12px; color: var(--training-muted, var(--muted)); line-height: 1.4; }
+.opening-chapter-meta { font-size: 11px; color: #a7c8df; }
+.opening-done { color: #a5e1a7; font-weight: 900; font-size: 22px; }
+.opening-lesson-head { display: grid; gap: 10px; }
+.opening-lesson-head .seg { margin-top: 4px; }
+.opening-position-card { display: grid; gap: 7px; }
+.opening-position-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: #b8c6d2; }
+.opening-position-meta b { color: #e4e9ef; font-variant-numeric: tabular-nums; flex: none; }
+.board-wrap.opening-board { margin: 0 auto; max-width: min(100%, 520px); }
+.opening-moves {
+  display: flex; gap: 6px; padding: 6px 2px; overflow-x: auto; scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+}
+.opening-move {
+  white-space: nowrap; flex: none; border: 1px solid #3b4651; background: #27313a;
+  color: #e2e6ea; font-size: 12px; font-weight: 650; padding: 7px 10px;
+  border-radius: 9px; min-height: 32px; scroll-snap-align: center;
+}
+.opening-move.current { border-color: #b4dd8f; color: #dff5bd; background: #344331; }
+.opening-move.upcoming { opacity: .56; }
+.opening-move:disabled { cursor: default; }
+.opening-explanation { display: grid; gap: 10px; border-color: #425366; animation: openingExplain .2s ease-out; }
+.opening-explanation-label {
+  color: #a9d2f5; display: flex; justify-content: space-between; gap: 10px;
+  font-size: 10px; font-weight: 800; letter-spacing: .095em;
+}
+.opening-explanation-label span { color: #b6c1cc; letter-spacing: 0; font-size: 12px; }
+.opening-explanation h3 { font-size: clamp(17px, 3.7vw, 22px); margin: 0; line-height: 1.3; }
+.opening-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.opening-controls .btn { min-width: 0; font-size: 13px; padding: 10px 6px; }
+.opening-branches { display: grid; gap: 10px; }
+.opening-branches > p { margin: 0; line-height: 1.5; color: var(--training-muted, var(--muted)); }
+.opening-branch { display: grid; grid-template-columns: 1fr 22px; gap: 5px 10px; }
+.opening-branch b { font-size: 14px; }
+.opening-branch small { grid-column: 1; color: #b6c0cc; line-height: 1.5; }
+.opening-branch svg { grid-column: 2; grid-row: 1 / span 2; }
+.opening-practice-prompt { display: grid; gap: 9px; padding: 12px 4px; }
+.opening-practice-prompt strong { font-size: 17px; }
+.opening-practice-prompt p { margin: 0; color: var(--training-muted, var(--muted)); font-size: 13px; line-height: 1.6; }
+@keyframes openingExplain { from { opacity: .4; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@media (min-width: 700px) {
+  .opening-hero, .opening-principles, .opening-lesson-head, .opening-explanation, .opening-branches { padding: 23px; }
+  .opening-chapters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .board-wrap.opening-board { width: min(100%, 510px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-explanation { animation: none; }
+  .opening-chapter, .opening-branch, .opening-progress-track span { transition: none; }
+}
