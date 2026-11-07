@@ -26,7 +26,12 @@ const EXAMPLE = `[Event "Opera Game"]
 
 const FEN_RE = /^\s*[rnbqkpRNBQKP1-8]+(\/[rnbqkpRNBQKP1-8]+){7}\s+[wb]\b/;
 const NOTABLE = new Set(['brilliant', 'great', 'inaccuracy', 'mistake', 'miss', 'blunder']);
-const DEPTHS = { fast: 12, normal: 14, deep: 18 };
+const DEPTHS = { fast: 12, normal: 16, deep: 20 };
+const REVIEW_TIME_MS = { 12: 700, 16: 1400, 20: 2500 }; // Макс. время на позицию.
+function liveDepth(chess) {
+  const moves = chess.movesCount();
+  return chess.inCheck() || moves <= 12 ? 22 : moves >= 32 ? 16 : 20;
+}
 
 export function mountAnalysis(root, { go, params = {} }) {
   let record = null;        // { id, headers, startFen, moves, result, myColor, review?, notes, source }
@@ -76,9 +81,12 @@ export function mountAnalysis(root, { go, params = {} }) {
     const turn = c.turn();
     let raf = 0;
     try {
+      const cfg = settings.get();
       await engine.analyse(live.fen, {
-        depth: 22,
-        multipv: 3,
+        depth: liveDepth(c),
+        movetime: 4000,
+        multipv: Math.max(1, Math.min(5, Number(cfg.analysisLines) || 3)),
+        shouldSkip: () => my !== live.token || destroyed || !needsLive(),
         onInfo: (lines) => {
           if (my !== live.token) return;
           live.lines = lines.map((l) => ({ ...l, score: toWhitePov(l.score, turn) }));
@@ -201,6 +209,7 @@ export function mountAnalysis(root, { go, params = {} }) {
       await engine.newGame();
       const res = await reviewGame(engine, { startFen: record.startFen, moves: record.moves }, {
         depth,
+        movetime: REVIEW_TIME_MS[depth] || 1400,
         onProgress: (d, t) => { if (reviewing) { reviewing.done = d; reviewing.total = t; updateProgress(); } },
         shouldStop: () => cancelled || destroyed,
       });
@@ -525,7 +534,12 @@ export function mountAnalysis(root, { go, params = {} }) {
       h('div', { class: 'grow' }, h('div', { class: 'mc-title' }, 'Stockfish 18'), h('div', { class: 'mc-move', 'data-live': 'depth' }, 'анализ…')),
       h('div', { class: 'mc-eval', 'data-live': 'eval' }, '…'));
     els.engineLine = h('div', { class: 'engine-lines', 'data-live': 'line' }, '');
-    card.append(head, els.engineLine);
+    const lineSelector = segmented([['1', '1'], ['2', '2'], ['3', '3'], ['5', '5']],
+      String(settings.get().analysisLines || 3), (value) => {
+        settings.set({ analysisLines: Number(value) });
+        startLive();
+      });
+    card.append(head, h('div', { class: 'muted small' }, 'Линии анализа'), lineSelector, els.engineLine);
     return card;
   }
 
@@ -551,7 +565,7 @@ export function mountAnalysis(root, { go, params = {} }) {
     const f = fmt();
     const start = new Chess(live.fen);
     els.engineLine.innerHTML = '';
-    for (const ln of live.lines.slice(0, 3)) {
+    for (const ln of live.lines.slice(0, Math.max(1, Math.min(5, Number(settings.get().analysisLines) || 3)))) {
       if (!ln || !ln.pv.length) continue;
       let num = start.moveNumber(), white = start.turn() === 'w';
       const sans = uciLineToSan(live.fen, ln.pv, 8).map((s, i) => {
@@ -587,7 +601,7 @@ export function mountAnalysis(root, { go, params = {} }) {
       h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { style: { fontWeight: 750, fontSize: '17px' } }, 'Stockfish разбирает партию…'), els.progressText),
         h('button', { class: 'btn btn-sm', onclick: () => reviewing && reviewing.cancel() }, 'Стоп')),
       h('div', { class: 'progress' }, bar),
-      h('div', { class: 'muted small' }, 'На телефоне это занимает 1–3 минуты. Можно листать ходы, пока идёт разбор.'));
+      h('div', { class: 'muted small' }, 'Время зависит от телефона и числа ходов. Для каждой позиции действует ограничение по времени.'));
   }
 
   function updateProgress() {
@@ -667,7 +681,7 @@ export function mountAnalysis(root, { go, params = {} }) {
       const mine = record.myColor ? extractPuzzles(data, record.myColor).length : 0;
       card.append(h('button', { class: 'btn btn-block', onclick: sharePgn }, icon('share'), 'PGN с комментариями'));
       if (mine) card.append(h('button', { class: 'btn btn-block', onclick: () => go('puzzles') }, icon('puzzles'), `Задачи из ваших ошибок: ${mine}`));
-      card.append(h('button', { class: 'btn btn-block btn-ghost', onclick: () => runReview(18) }, 'Разобрать глубже (дольше)'));
+      card.append(h('button', { class: 'btn btn-block btn-ghost', onclick: () => runReview(20) }, 'Разобрать глубже (дольше)'));
     } else if (record.moves.length && record.source !== 'free') {
       card.append(h('button', { class: 'btn btn-block', onclick: sharePgn }, icon('share'), 'Скопировать PGN'));
     }
