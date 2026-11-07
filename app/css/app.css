@@ -538,3 +538,63 @@ body.game-active main#view { padding-bottom: calc(64px + env(safe-area-inset-bot
   .btn, .action { transition: transform .18s ease, background .18s ease; }
   .action:active { transform: scale(.97); }
 }
+
+/* Учебный раздел: отдельная спортивная подача с реальными шахматными сценами. */
+main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; --training-text: #f4f5ee; --training-muted: #b4bbc2; color: var(--training-text); gap: 16px; padding-top: 18px; }
+.training-screen .card, .training-screen .move-card, .training-screen .game-item { animation: none; }
+.training-screen .card, .training-screen .move-card { background: var(--training-panel); border-color: #37404a; box-shadow: none; }
+.training-screen .card p, .training-screen .mc-text { color: var(--training-muted); }
+.training-heading { padding: 8px 4px 2px; }
+.training-heading h2 { margin: 0; font-size: clamp(28px, 5vw, 38px); font-weight: 800; letter-spacing: -.045em; line-height: 1.12; }
+.training-heading p { margin: 10px 0 0; color: var(--training-muted); font-size: 15px; max-width: 48ch; }
+.training-grid, .training-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.training-card { --training-color: #c3ed67; appearance: none; display: grid; grid-template-columns: minmax(0, 1fr) 24px; gap: 14px 8px; align-content: start; padding: 14px; border: 1px solid #3c4652; border-radius: 20px; background: var(--training-panel); color: var(--training-text); text-align: left; min-width: 0; width: 100%; overflow: hidden; position: relative; transition: border-color .18s ease, transform .18s ease; }
+.training-card::before { content: ''; position: absolute; top: 16px; left: 0; width: 3px; height: 34px; border-radius: 0 4px 4px 0; background: var(--training-color); }
+.training-mistakes { --training-color: #ff9985; }
+.training-openings { --training-color: #8bc7ff; }
+.training-ideas { --training-color: #f4cc73; }
+.training-art { display: block; width: min(100%, 160px); aspect-ratio: 1; border-radius: 10px; overflow: hidden; color: var(--training-color); flex: none; }
+.training-art > svg { display: block; width: 100%; height: 100%; max-width: 100%; }
+.training-card > .training-art { grid-column: 1 / -1; justify-self: center; }
+.training-copy { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.training-meta { font-size: 11px; font-weight: 750; color: var(--training-color); letter-spacing: .04em; }
+.training-title { display: block; font-size: clamp(17px, 2.5vw, 21px); font-weight: 800; line-height: 1.2; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.training-description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; color: var(--training-muted); font-size: 13px; line-height: 1.45; }
+.training-chevron { align-self: center; color: var(--training-color); width: 24px; height: 24px; flex: none; }
+.training-chevron > svg { width: 24px; height: 24px; display: block; }
+.training-featured { grid-column: 1 / -1; grid-template-columns: minmax(90px, 120px) minmax(0, 1fr) 24px; align-items: center; }
+.training-featured > .training-art { grid-column: 1; width: 100%; }
+.training-catalog { grid-template-columns: minmax(0, 1fr); }
+.training-catalog .training-card { grid-template-columns: 76px minmax(0, 1fr) 24px; align-items: center; border-radius: 16px; padding: 12px; }
+.training-catalog .training-card > .training-art { grid-column: 1; width: 76px; }
+.training-catalog .training-title { font-size: 16px; }
+.training-catalog .training-description { -webkit-line-clamp: 2; }
+.training-screen .game-item > svg { width: 24px; height: 24px; flex: 0 0 24px; }
+.training-card:focus-visible { outline: 2px solid var(--training-color); outline-offset: 3px; }
+.training-card:active { transform: scale(.985); border-color: var(--training-color); }
+.training-enter { animation: trainingEnter .22s ease-out both; }
+@keyframes trainingEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (hover: hover) { .training-card:hover { border-color: var(--training-color); } }
+@media (max-width: 359px) {
+  .training-grid { grid-template-columns: minmax(0, 1fr); }
+  .training-featured { grid-template-columns: 90px minmax(0, 1fr) 24px; }
+  .training-catalog .training-card { grid-template-columns: 60px minmax(0, 1fr) 24px; }
+  .training-catalog .training-card > .training-art { width: 60px; }
+}
+@media (min-width: 700px) {
+  .training-grid { gap: 16px; }
+  .training-featured { grid-column: auto; grid-template-columns: minmax(0, 1fr) 24px; align-items: start; }
+  .training-featured > .training-art { grid-column: 1 / -1; width: 160px; }
+  .training-catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .training-catalog .training-card { grid-template-columns: 60px minmax(0, 1fr) 24px; }
+  .training-catalog .training-card > .training-art { width: 60px; }
+}
+@media (prefers-reduced-motion: reduce) { .training-enter { animation: none; } .training-card { transition: none; } }
+@media (min-width: 360px) and (max-width: 699px) {
+  .training-grid > .training-ideas { grid-column: 1 / -1; grid-template-columns: 90px minmax(0, 1fr) 24px; align-items: center; }
+  .training-grid > .training-ideas > .training-art { grid-column: 1; width: 90px; }
+}
+@media (min-width: 700px) {
+  .training-grid .training-card, .training-grid .training-featured { grid-template-columns: 100px minmax(0, 1fr) 24px; align-items: center; }
+  .training-grid .training-card > .training-art { grid-column: 1; width: 100px; }
+}

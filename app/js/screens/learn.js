@@ -1,3 +1,4 @@
+import { trainingCard } from '../training-ui.js';
 import { Chess } from '../chess.js';
 import { OPENING_LINES } from '../openings.js';
 import { Board } from '../board.js';
@@ -36,31 +37,27 @@ const EXAMPLES = [
   { title: 'Жертва и матовая сеть · ловушка Легаля', moves: 'e4 e5 Nf3 d6 Bc4 Bg4 Nc3 g6 Nxe5 Bxd1 Bxf7+ Ke7 Nd5#', idea: 'После жертвы ферзя ищите форсированные шахи. Координация слона и коней создаёт матовую сеть. Это учебная линия, а не документированная турнирная партия.' },
 ];
 
-export function mountLearn(root, back) {
-  let page = 'menu', side = 'w', lesson = null, lines = [], line = 0, ply = 0;
+export function mountLearn(root, back, initialPage = 'openings') {
+  let page = initialPage, side = 'w', lesson = null, lines = [], line = 0, ply = 0;
   const board = new Board(h('div'));
   function draw() {
     root.replaceChildren();
-    root.append(h('button', { class: 'btn btn-block', onclick: () => { if (page === 'menu') back(); else if (page === 'lesson') { page = lesson.kind; draw(); } else { page = 'menu'; draw(); } } }, icon('prev'), 'Назад'));
-    if (page === 'menu') {
-      root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, 'Шахматная школа'), h('p', {}, 'Изучайте начала партий и идеи на доске.')),
-        h('button', { class: 'btn btn-primary btn-block', onclick: () => { page = 'openings'; draw(); } }, 'Обучение дебютам'),
-        h('button', { class: 'btn btn-block', onclick: () => { page = 'ideas'; draw(); } }, 'Как находить идеи?'));
-      return;
-    }
+    root.append(h('button', { class: 'btn btn-block', onclick: () => { if (page === 'lesson') { page = lesson.kind; draw(); } else back(); } }, icon('prev'), 'Назад'));
     if (page === 'openings') {
       root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, 'Обучение дебютам'), segmented([['w', 'За белых'], ['b', 'За чёрных']], side, v => { side = v; draw(); })));
-      for (const [name, idea] of side === 'w' ? WHITE : BLACK) root.append(h('button', { class: 'game-item', onclick: () => {
+      const catalog = h('div', { class: 'training-catalog training-enter' }); root.append(catalog);
+      for (const [name, idea] of side === 'w' ? WHITE : BLACK) catalog.append(trainingCard({ title: name, description: idea, kind: 'openings', onclick: () => {
         const matches = OPENING_LINES.filter(x => x.name === name || x.name.startsWith(name + ','));
         const base = matches.find(x => x.name === name); if (!base) return;
         const longer = OPENING_LINES.filter(x => x.moves.length > base.moves.length && base.moves.every((m, i) => x.moves[i] === m)).sort((a, b) => a.moves.length - b.moves.length);
         lines = [base, ...longer.slice(0, 2)]; lesson = { kind: 'openings', title: name, idea }; line = 0; ply = 0; page = 'lesson'; draw();
-      } }, h('div', { class: 'grow' }, h('div', { class: 'gi-title' }, name), h('div', { class: 'gi-sub' }, idea)), icon('next')));
+      } }));
       return;
     }
     if (page === 'ideas') {
       root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, 'Как находить идеи?'), h('p', {}, 'Начните с шахов, взятий и угроз. Оцените незащищённые фигуры, открытые линии и безопасность королей.')));
-      for (const item of EXAMPLES) root.append(h('button', { class: 'game-item', onclick: () => { lesson = { kind: 'ideas', title: item.title, idea: item.idea }; lines = [{ name: 'Партия', moves: item.moves.split(' ') }]; line = 0; ply = 0; page = 'lesson'; draw(); } }, h('div', { class: 'grow' }, h('div', { class: 'gi-title' }, item.title), h('div', { class: 'gi-sub' }, item.idea)), icon('next')));
+      const catalog = h('div', { class: 'training-catalog training-enter' }); root.append(catalog);
+      for (const item of EXAMPLES) catalog.append(trainingCard({ title: item.title, description: item.idea, kind: 'ideas', onclick: () => { lesson = { kind: 'ideas', title: item.title, idea: item.idea }; lines = [{ name: 'Партия', moves: item.moves.split(' ') }]; line = 0; ply = 0; page = 'lesson'; draw(); } }));
       return;
     }
     const game = new Chess(); let last = null;
@@ -73,5 +70,5 @@ export function mountLearn(root, back) {
       h('div', { class: 'nav' }, h('button', { class: 'btn', disabled: ply === 0, onclick: () => { ply = 0; draw(); } }, icon('first')), h('button', { class: 'btn', disabled: ply === 0, onclick: () => { ply--; draw(); } }, icon('prev')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { ply++; draw(); } }, icon('next')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { ply = lines[line].moves.length; draw(); } }, icon('last'))));
     if (lines.length > 1) root.append(h('div', { class: 'card' }, h('div', { class: 'label' }, 'Продолжения'), ...lines.map((l, i) => h('button', { class: 'btn btn-block' + (i === line ? ' btn-primary' : ''), onclick: () => { line = i; ply = 0; draw(); } }, l.name))));
   }
-  draw(); return { destroy() {} };
+  draw(); return { destroy() { board.setInteractive(null); }, refresh() { draw(); } };
 }

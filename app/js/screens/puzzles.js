@@ -1,4 +1,5 @@
 // Экран «Задачи»: позиции из ваших же ошибок — найдите ход лучше, чем был сыгран.
+import { trainingCard, trainingHeader } from '../training-ui.js';
 import { Chess } from '../chess.js';
 import { mountLearn } from './learn.js';
 import { mountThemedPuzzles } from './themed-puzzles.js';
@@ -14,6 +15,13 @@ const ART = `<svg class="art" viewBox="0 0 96 96" fill="none" aria-hidden="true"
 
 export function mountPuzzles(root, { go }) {
   let themed = null;
+  let mode = 'menu';
+  const timers = new Set();
+  function later(fn, delay) { const timer = setTimeout(() => { timers.delete(timer); if (!destroyed && mode === 'personal') fn(); }, delay); timers.add(timer); }
+  function leaveView() { token++; for (const timer of timers) clearTimeout(timer); timers.clear(); themed?.destroy(); themed = null; board.setInteractive(null); }
+  root.classList.add('training-screen');
+  function menu() { leaveView(); mode = 'menu'; if (status === 'checking') status = 'solving'; render(false); }
+  function openChild(mount) { leaveView(); mode = 'child'; themed = mount(menu); }
   let p = null;
   let status = 'solving'; // solving | checking | solved | failed | revealed
   let message = '';
@@ -27,6 +35,7 @@ export function mountPuzzles(root, { go }) {
   }
 
   function next() {
+    token++; for (const timer of timers) clearTimeout(timer); timers.clear();
     p = puzzles.next(p && p.id);
     status = 'solving';
     message = '';
@@ -34,11 +43,19 @@ export function mountPuzzles(root, { go }) {
   }
 
   function render(animate = true) {
-    if (destroyed) return;
+    if (destroyed || mode === 'child') return;
     root.innerHTML = '';
-    root.append(h('button', { class: 'btn btn-primary btn-block learn-enter', onclick: () => { token++; themed = mountLearn(root, () => { themed = null; render(false); }); } }, 'Шахматная школа'));
-    root.append(h('button', { class: 'btn btn-block', onclick: () => { token++; themed = mountThemedPuzzles(root, () => { themed = null; render(false); }); } }, icon('puzzles'), 'Тематические задачи'));
     const st = stats();
+    if (mode === 'menu') {
+      root.append(trainingHeader('Тренировка', 'Выберите, что хотите прокачать сегодня.'),
+        h('div', { class: 'training-grid training-enter' },
+          trainingCard({ title: 'Мои ошибки', description: 'Вернитесь к своим позициям и найдите ход сильнее.', kind: 'mistakes', count: st.total ? `${st.todo} осталось · ${st.solved} решено` : 'Из ваших партий', featured: true, onclick: () => { leaveView(); mode = 'personal'; status = 'solving'; message = ''; render(false); } }),
+          trainingCard({ title: 'Тактика', description: 'Матовые сети и двойные удары на готовых позициях.', kind: 'tactics', onclick: () => openChild(back => mountThemedPuzzles(root, back)) }),
+          trainingCard({ title: 'Дебюты', description: 'Первые ходы, продолжения и планы за оба цвета.', kind: 'openings', onclick: () => openChild(back => mountLearn(root, back, 'openings')) }),
+          trainingCard({ title: 'Как находить идеи?', description: 'Атака, защита и жертвы на примерах партий.', kind: 'ideas', onclick: () => openChild(back => mountLearn(root, back, 'ideas')) })));
+      return;
+    }
+    root.append(h('button', { class: 'btn btn-ghost', onclick: menu }, icon('prev'), 'К тренировкам'));
     if (!st.total) {
       root.append(h('div', { class: 'card empty' },
         h('div', { html: ART }),
@@ -112,7 +129,7 @@ export function mountPuzzles(root, { go }) {
     playSound('good');
     const reward = applyPuzzleSolved(profileStore.get());
     profileStore.set(reward.profile);
-    if (reward.fresh.length) setTimeout(() => celebrate(reward.fresh), 900);
+    if (reward.fresh.length) later(() => celebrate(reward.fresh), 900);
     render(false);
     const c = new Chess(p.fen);
     const mv = c.move(p.best);
@@ -128,7 +145,7 @@ export function mountPuzzles(root, { go }) {
     const mv = c.move(p.best);
     if (!mv) return;
     board.setArrows([{ from: mv.from, to: mv.to, color: '#81b64c' }]);
-    setTimeout(() => { if (!destroyed && status === 'revealed') { board.setPosition(c, { lastMove: { from: mv.from, to: mv.to } }); playSound(soundForMove(mv, c)); } }, 700);
+    later(() => { if (!destroyed && status === 'revealed') { board.setPosition(c, { lastMove: { from: mv.from, to: mv.to } }); playSound(soundForMove(mv, c)); } }, 700);
   }
 
   async function attempt(m, { animate }) {
@@ -148,6 +165,7 @@ export function mountPuzzles(root, { go }) {
     board.setInteractive(null);
     try {
       const engine = await getEngine();
+      if (my !== token || destroyed || mode !== 'personal') return;
       const res = await engine.analyse(c.fen(), { depth: 12 });
       if (my !== token || destroyed) return;
       const score = res.lines[0] ? toWhitePov(res.lines[0].score, c.turn()) : { cp: 0 };
@@ -157,11 +175,12 @@ export function mountPuzzles(root, { go }) {
       message = 'Не лучший ход — попробуйте ещё раз.';
       playSound('bad');
       puzzles.update(p.id, { failed: (p.failed || 0) + 1, lastTry: Date.now() });
-      setTimeout(() => { if (!destroyed && status === 'failed') render(true); }, 650);
+      later(() => { if (!destroyed && status === 'failed') render(true); }, 650);
       render(false);
       board.setPosition(c, { lastMove: { from: mv.from, to: mv.to }, animate: false });
       board.setInteractive(null);
     } catch (e) {
+      if (my !== token || destroyed || mode !== 'personal') return;
       status = 'solving';
       message = '';
       toast(e.message || 'Движок не ответил');
@@ -170,5 +189,5 @@ export function mountPuzzles(root, { go }) {
   }
 
   render(false);
-  return { destroy() { destroyed = true; token++; themed?.destroy(); }, refresh() { if (!themed) render(false); } };
+  return { destroy() { destroyed = true; leaveView(); root.classList.remove('training-screen'); }, refresh() { if (themed) themed.refresh?.(); else render(false); } };
 }
