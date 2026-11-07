@@ -39,6 +39,7 @@ export function mountGuidedOpening(root, course, onBack) {
   let timer = null;
   let errors = 0;
   let feedback = '';
+  let hintSquare = null;
   let finished = false;
   let destroyed = false;
   let paintToken = 0;
@@ -68,6 +69,7 @@ export function mountGuidedOpening(root, course, onBack) {
     selected = null;
     variation = null;
     mode = 'theory';
+    hintSquare = null;
     board.setInteractive(null);
     render();
   }
@@ -79,6 +81,7 @@ export function mountGuidedOpening(root, course, onBack) {
     variation = null;
     errors = 0;
     feedback = '';
+    hintSquare = null;
     finished = false;
     mode = 'theory';
     render(false);
@@ -91,6 +94,7 @@ export function mountGuidedOpening(root, course, onBack) {
     mode = next;
     errors = 0;
     feedback = '';
+    hintSquare = null;
     finished = false;
     render(false);
     if (mode === 'practice') schedule(opponentTurn, 450);
@@ -142,6 +146,7 @@ export function mountGuidedOpening(root, course, onBack) {
     if (!played) return;
     ply++;
     feedback = '';
+    hintSquare = null;
     playSound(soundForMove(played, game));
     render(true);
     schedule(opponentTurn, 600);
@@ -171,12 +176,13 @@ export function mountGuidedOpening(root, course, onBack) {
       errors++;
       feedback = 'Это допустимый ход, но мы учим конкретный план. ' +
         (errors >= 2 ? 'Подсказка: сыграй ' + moves[ply] + '.' : 'Подумай, что мы готовим в этой позиции.');
+      hintSquare = errors >= 2 ? expected.from : null;
       playSound('bad');
       render(false);
-      if (errors >= 2) board.setHint(expected.from);
       return;
     }
     ply++;
+    hintSquare = null;
     const explanation = selected.notes[ply];
     feedback = explanation ? explanation.title + ': ' + explanation.text : 'Верно! Продолжаем линию.';
     playSound(soundForMove(played, game));
@@ -191,11 +197,10 @@ export function mountGuidedOpening(root, course, onBack) {
     const { game } = makeOpeningPosition(moves, ply, Chess);
     const expected = new Chess(game.fen()).move(moves[ply]);
     if (!expected) return;
-    board.setHint(expected.from);
+    hintSquare = expected.from;
     feedback = 'Подумай о ходе из ' + expected.from + '. ' +
       (selected.notes[ply + 1]?.text || selected.summary);
-    const banner = root.querySelector('[data-training-feedback]');
-    if (banner) banner.textContent = feedback;
+    render(false);
   }
 
   function markUpBoard(game, lastMove, animate, annotation) {
@@ -213,6 +218,7 @@ export function mountGuidedOpening(root, course, onBack) {
         lastMove: lastMove ? { from: lastMove.from, to: lastMove.to } : null,
         animate,
       });
+      if (hintSquare && mode === 'practice') board.setHint(hintSquare);
       board.setArrows(annotation?.arrows?.length
         ? annotation.arrows.map((a) => arrow(a.from, a.to, '#e2b86d'))
         : lastMove ? [arrow(lastMove.from, lastMove.to)] : []);
@@ -287,7 +293,10 @@ export function mountGuidedOpening(root, course, onBack) {
         class: 'opening-move' + (index + 1 === ply ? ' current' : '') +
           (index + 1 > ply ? ' upcoming' : ''),
         disabled: mode === 'practice',
-        onclick: () => { stop(); ply = index + 1; render(Math.abs(ply - index) === 1); },
+        onclick: () => {
+          const distance = Math.abs(ply - (index + 1));
+          stop(); ply = index + 1; render(distance === 1);
+        },
       }, ((index % 2 === 0) ? Math.floor(index / 2) + 1 + '. ' : '') + san));
     });
     root.append(moveStrip);
