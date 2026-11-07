@@ -1,6 +1,8 @@
 import { trainingCard } from '../training-ui.js';
 import { Chess } from '../chess.js';
 import { OPENING_LINES } from '../openings.js';
+import { courseByName } from '../opening-lessons.js';
+import { mountGuidedOpening } from './guided-opening.js';
 import { Board } from '../board.js';
 import { settings } from '../store.js';
 import { animationMs } from '../timecontrol.js';
@@ -40,13 +42,25 @@ const EXAMPLES = [
 export function mountLearn(root, back, initialPage = 'openings') {
   let page = initialPage, side = 'w', lesson = null, lines = [], line = 0, ply = 0;
   const board = new Board(h('div'));
+  let guided = null;
   function draw() {
     root.replaceChildren();
     root.append(h('button', { class: 'btn btn-block', onclick: () => { if (page === 'lesson') { page = lesson.kind; draw(); } else back(); } }, icon('prev'), 'Назад'));
     if (page === 'openings') {
       root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, 'Обучение дебютам'), segmented([['w', 'За белых'], ['b', 'За чёрных']], side, v => { side = v; draw(); })));
       const catalog = h('div', { class: 'training-catalog training-enter' }); root.append(catalog);
-      for (const [name, idea] of side === 'w' ? WHITE : BLACK) catalog.append(trainingCard({ title: name, description: idea, kind: 'openings', onclick: () => {
+      for (const [name, idea] of side === 'w' ? WHITE : BLACK) catalog.append(trainingCard({
+        title: name, description: idea, kind: 'openings',
+        count: courseByName(name, side) ? '8 подробных глав · тренировка' : undefined,
+        onclick: () => {
+        const featured = courseByName(name, side);
+        if (featured) {
+          page = 'guided';
+          guided = mountGuidedOpening(root, featured, () => {
+            guided?.destroy(); guided = null; page = 'openings'; draw();
+          });
+          return;
+        }
         const matches = OPENING_LINES.filter(x => x.name === name || x.name.startsWith(name + ','));
         const base = matches.find(x => x.name === name); if (!base) return;
         const longer = OPENING_LINES.filter(x => x.moves.length > base.moves.length && base.moves.every((m, i) => x.moves[i] === m)).sort((a, b) => a.moves.length - b.moves.length);
@@ -70,5 +84,8 @@ export function mountLearn(root, back, initialPage = 'openings') {
       h('div', { class: 'nav' }, h('button', { class: 'btn', disabled: ply === 0, onclick: () => { ply = 0; draw(); } }, icon('first')), h('button', { class: 'btn', disabled: ply === 0, onclick: () => { ply--; draw(); } }, icon('prev')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { ply++; draw(); } }, icon('next')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { ply = lines[line].moves.length; draw(); } }, icon('last'))));
     if (lines.length > 1) root.append(h('div', { class: 'card' }, h('div', { class: 'label' }, 'Продолжения'), ...lines.map((l, i) => h('button', { class: 'btn btn-block' + (i === line ? ' btn-primary' : ''), onclick: () => { line = i; ply = 0; draw(); } }, l.name))));
   }
-  draw(); return { destroy() { board.setInteractive(null); }, refresh() { draw(); } };
+  draw(); return {
+    destroy() { guided?.destroy(); board.setInteractive(null); },
+    refresh() { if (guided) guided.refresh(); else draw(); },
+  };
 }
