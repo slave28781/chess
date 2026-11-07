@@ -598,3 +598,7 @@ main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; -
   .training-grid .training-card, .training-grid .training-featured { grid-template-columns: 100px minmax(0, 1fr) 24px; align-items: center; }
   .training-grid .training-card > .training-art { grid-column: 1; width: 100px; }
 }
+.training-screen .opening-variants, .training-screen .opening-notes { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.training-screen .opening-variants .btn { white-space: normal; text-align: left; justify-content: flex-start; height: auto; padding: 12px 14px; }
+.training-screen .opening-notes p { margin: 0; }
+.training-screen .opening-notes h3 { margin: 6px 0 0; }

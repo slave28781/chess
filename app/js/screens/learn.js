@@ -1,10 +1,10 @@
 import { trainingCard } from '../training-ui.js';
 import { Chess } from '../chess.js';
-import { OPENING_LINES } from '../openings.js';
+import { OPENING_LESSONS } from '../opening-lessons.js';
 import { Board } from '../board.js';
 import { settings } from '../store.js';
 import { animationMs } from '../timecontrol.js';
-import { h, icon, segmented } from '../ui.js';
+import { h, icon, segmented, fmt } from '../ui.js';
 
 const WHITE = [
   ['Испанская партия', 'Развивайте фигуры, защищайте центр и готовьте рокировку. Слон b5 создаёт давление на защитника пешки e5.'],
@@ -38,7 +38,7 @@ const EXAMPLES = [
 ];
 
 export function mountLearn(root, back, initialPage = 'openings') {
-  let page = initialPage, side = 'w', lesson = null, lines = [], line = 0, ply = 0;
+  let page = initialPage, side = 'w', lesson = null, lines = [], line = 0, ply = 0, showPlan = false;
   const board = new Board(h('div'));
   function draw() {
     root.replaceChildren();
@@ -47,28 +47,42 @@ export function mountLearn(root, back, initialPage = 'openings') {
       root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, 'Обучение дебютам'), segmented([['w', 'За белых'], ['b', 'За чёрных']], side, v => { side = v; draw(); })));
       const catalog = h('div', { class: 'training-catalog training-enter' }); root.append(catalog);
       for (const [name, idea] of side === 'w' ? WHITE : BLACK) catalog.append(trainingCard({ title: name, description: idea, kind: 'openings', onclick: () => {
-        const matches = OPENING_LINES.filter(x => x.name === name || x.name.startsWith(name + ','));
-        const base = matches.find(x => x.name === name); if (!base) return;
-        const longer = OPENING_LINES.filter(x => x.moves.length > base.moves.length && base.moves.every((m, i) => x.moves[i] === m)).sort((a, b) => a.moves.length - b.moves.length);
-        lines = [base, ...longer.slice(0, 2)]; lesson = { kind: 'openings', title: name, idea }; line = 0; ply = 0; page = 'lesson'; draw();
+        const material = OPENING_LESSONS[name];
+        lines = material.variants;
+        lesson = { ...material, kind: 'openings', title: name, idea }; line = 0; ply = 0; showPlan = false; page = 'lesson'; draw();
       } }));
       return;
     }
     if (page === 'ideas') {
       root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, 'Как находить идеи?'), h('p', {}, 'Начните с шахов, взятий и угроз. Оцените незащищённые фигуры, открытые линии и безопасность королей.')));
       const catalog = h('div', { class: 'training-catalog training-enter' }); root.append(catalog);
-      for (const item of EXAMPLES) catalog.append(trainingCard({ title: item.title, description: item.idea, kind: 'ideas', onclick: () => { lesson = { kind: 'ideas', title: item.title, idea: item.idea }; lines = [{ name: 'Партия', moves: item.moves.split(' ') }]; line = 0; ply = 0; page = 'lesson'; draw(); } }));
+      for (const item of EXAMPLES) catalog.append(trainingCard({ title: item.title, description: item.idea, kind: 'ideas', onclick: () => { lesson = { kind: 'ideas', title: item.title, idea: item.idea }; lines = [{ name: 'Партия', moves: item.moves.split(' ') }]; line = 0; ply = 0; showPlan = false; page = 'lesson'; draw(); } }));
       return;
     }
     const game = new Chess(); let last = null;
     for (const san of lines[line].moves.slice(0, ply)) { const m = game.move(san); if (!m) break; last = m; }
     board.setOrientation(lesson.kind === 'openings' ? side : 'w'); board.setAnimation(animationMs(settings.get().animation)); board.setCoords(settings.get().coords);
     board.setPosition(game, { lastMove: last && { from: last.from, to: last.to }, animate: true });
-    board.setArrows(last ? [{ from: last.from, to: last.to, color: '#81b64c' }] : []);
-    root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, lesson.title), h('p', {}, lesson.idea), h('div', { class: 'muted small' }, `Ход ${ply} из ${lines[line].moves.length} · стрелка показывает последний ход`)),
+    const active = lines[line];
+    const format = fmt();
+    const plan = showPlan && ply === active.moves.length && active.plan;
+    board.setArrows(plan ? [{ from: plan.slice(0, 2), to: plan.slice(2, 4), color: '#f4cc73' }] : last ? [{ from: last.from, to: last.to, color: '#81b64c' }] : []);
+    root.append(h('div', { class: 'card learn-enter' }, h('h2', {}, lesson.title), h('p', {}, lesson.idea), h('div', { class: 'muted small' }, `Ход ${ply} из ${lines[line].moves.length} · ${plan ? 'золотая стрелка показывает учебный план' : 'стрелка показывает последний ход'}`)),
       h('div', { class: 'board-wrap' }, board.root),
-      h('div', { class: 'nav' }, h('button', { class: 'btn', disabled: ply === 0, onclick: () => { ply = 0; draw(); } }, icon('first')), h('button', { class: 'btn', disabled: ply === 0, onclick: () => { ply--; draw(); } }, icon('prev')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { ply++; draw(); } }, icon('next')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { ply = lines[line].moves.length; draw(); } }, icon('last'))));
-    if (lines.length > 1) root.append(h('div', { class: 'card' }, h('div', { class: 'label' }, 'Продолжения'), ...lines.map((l, i) => h('button', { class: 'btn btn-block' + (i === line ? ' btn-primary' : ''), onclick: () => { line = i; ply = 0; draw(); } }, l.name))));
+      h('div', { class: 'nav' }, h('button', { class: 'btn', disabled: ply === 0, onclick: () => { showPlan = false; ply = 0; draw(); } }, icon('first')), h('button', { class: 'btn', disabled: ply === 0, onclick: () => { showPlan = false; ply--; draw(); } }, icon('prev')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { showPlan = false; ply++; draw(); } }, icon('next')), h('button', { class: 'btn', disabled: ply >= lines[line].moves.length, onclick: () => { showPlan = false; ply = lines[line].moves.length; draw(); } }, icon('last'))));
+    if (lesson.kind === 'openings') {
+      const selector = h('div', { class: 'card opening-variants' }, h('div', { class: 'label' }, 'Основные варианты'));
+      for (const [i, option] of lines.entries()) selector.append(h('button', { class: 'btn btn-block' + (i === line ? ' btn-primary' : ''), 'aria-pressed': String(i === line), onclick: () => { line = i; ply = 0; showPlan = false; draw(); } }, option.name));
+      root.insertBefore(selector, root.querySelector('.board-wrap'));
+      const notation = h('div', { class: 'moves-strip', 'aria-label': 'Ходы учебного варианта' });
+      active.moves.forEach((san, i) => notation.append(h('button', { class: 'mchip' + (ply === i + 1 ? ' cur' : ''), onclick: () => { ply = i + 1; showPlan = false; draw(); } }, `${i % 2 === 0 ? Math.floor(i / 2) + 1 + '. ' : ''}${format(san)}`)));
+      root.append(notation,
+        h('section', { class: 'card opening-notes' }, h('h3', {}, active.name), h('p', {}, active.idea),
+          h('button', { class: 'btn btn-block', onclick: () => { ply = active.moves.length; showPlan = true; draw(); board.root.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }, icon('analysis'), 'Показать план на доске'),
+          h('p', { class: 'muted small' }, 'Стрелка показывает возможное продолжение в конце линии. Это учебный план, а не единственный лучший ход.')),
+        h('section', { class: 'card opening-notes' }, h('h3', {}, 'Идеи атаки'), h('p', {}, lesson.attack), h('h3', {}, 'Контригра соперника'), h('p', {}, lesson.counterplay)));
+    }
+
   }
   draw(); return { destroy() { board.setInteractive(null); }, refresh() { draw(); } };
 }
