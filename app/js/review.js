@@ -218,7 +218,7 @@ export function classifyGame(game, evals) {
  * Полный разбор с движком. engine.analyse(fen, { depth, multipv }) → { bestMove, lines: [{ score (от ходящего), pv }] }.
  * onProgress(done, total); shouldStop() → true прерывает разбор.
  */
-export async function reviewGame(engine, game, { depth = 14, onProgress, shouldStop } = {}) {
+export async function reviewGame(engine, game, { depth = 14, movetime, onProgress, shouldStop } = {}) {
   const pos = new Chess(game.startFen);
   const fens = [pos.fen()];
   for (const m of game.moves) { pos.move(m.uci || m.san); fens.push(pos.fen()); }
@@ -229,7 +229,7 @@ export async function reviewGame(engine, game, { depth = 14, onProgress, shouldS
     if (term) { evals.push(term); }
     else {
       const turn = new Chess(fens[i]).turn();
-      const res = await engine.analyse(fens[i], { depth, multipv: 2 });
+      const res = await engine.analyse(fens[i], { depth, movetime, multipv: 2 });
       const lines = res.lines.map((l) => ({ move: l.pv[0], score: toWhitePov(l.score, turn), pv: l.pv.slice(0, 10) }));
       evals.push({ bestMove: res.bestMove, score: lines[0] ? lines[0].score : { cp: 0 }, lines, depth });
     }
