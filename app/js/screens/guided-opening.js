@@ -207,7 +207,8 @@ export function mountGuidedOpening(root, course, onBack) {
     const moveMs = animationMs(settings.get().animation);
     board.setAnimation(moveMs === 0 ? 0 : Math.max(320, moveMs));
     board.setOrientation(course.side);
-    board.setCoords(settings.get().coords);
+    // В уроках координаты важны даже для игроков, скрывших их в обычной игре.
+    board.setCoords(true);
     board.setInteractive(null);
     // Доска уже находится в DOM. Обновляем её на кадре после перерисовки панели:
     // это сохраняет CSS-переходы фигур и плавное движение при разборе.
@@ -282,8 +283,16 @@ export function mountGuidedOpening(root, course, onBack) {
         h('span', {}, mode === 'practice' ? 'Повтори линию самостоятельно' :
           variation ? 'Вариант: ' + variation.title : 'Основная линия'),
         h('b', {}, 'Ход ' + ply + ' / ' + moves.length)));
-    const boardWrap = h('div', { class: 'board-wrap opening-board' }, board.root);
-    root.append(positionCard, boardWrap);
+    const boardWrap = h('div', {
+      class: 'board-wrap opening-board',
+      // Защита от старых закэшированных стилей и Safari flex shrink-to-fit:
+      // у внутренней .board дети позиционированы абсолютно.
+      style: { width: 'min(100%, 520px)', minWidth: '0', alignSelf: 'center' },
+    }, board.root);
+    const boardGuide = h('div', { class: 'opening-board-guide' },
+      h('span', {}, 'Доска со стороны ' + (course.side === 'w' ? 'белых' : 'чёрных') + ' · координаты a–h / 1–8'),
+      h('strong', {}, lastMove ? lastMove.from + ' → ' + lastMove.to : 'Начальная расстановка'));
+    root.append(positionCard, boardWrap, boardGuide);
 
     markUpBoard(game, lastMove, animate, note);
 
