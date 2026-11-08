@@ -85,7 +85,9 @@ export function mountGuidedOpening(root, course, onBack) {
     hintSquare = null;
     finished = false;
     mode = 'theory';
+    lastRenderedChapter = null;
     render(false);
+    window.scrollTo(0, 0);
   }
 
   function setMode(next) {
@@ -97,7 +99,9 @@ export function mountGuidedOpening(root, course, onBack) {
     feedback = '';
     hintSquare = null;
     finished = false;
+    lastRenderedChapter = null;
     render(false);
+    window.scrollTo(0, 0);
     if (mode === 'practice') schedule(opponentTurn, 450);
   }
 
@@ -236,6 +240,8 @@ export function mountGuidedOpening(root, course, onBack) {
     const boardTop = selected && lastRenderedChapter === selected && board.root.isConnected
       ? board.root.getBoundingClientRect().top : null;
     root.classList.toggle('opening-lesson-active', Boolean(selected));
+    root.classList.toggle('opening-practice-mode', Boolean(selected && mode === 'practice'));
+    root.classList.toggle('opening-practice-finished', Boolean(selected && mode === 'practice' && finished));
     root.replaceChildren();
     if (!selected) {
       lastRenderedChapter = null;
@@ -303,6 +309,29 @@ export function mountGuidedOpening(root, course, onBack) {
 
     markUpBoard(game, lastMove, animate, note);
 
+    if (mode === 'practice' && finished) {
+      const nextChapter = course.chapters[course.chapters.indexOf(selected) + 1];
+      root.append(h('div', { class: 'opening-completion-overlay' },
+        h('section', { class: 'opening-completion', role: 'status', 'aria-live': 'polite' },
+        h('span', { class: 'opening-completion-glow', 'aria-hidden': 'true' }),
+        h('div', { class: 'opening-completion-medal', 'aria-hidden': 'true' }, '✓'),
+        h('div', { class: 'opening-completion-eyebrow' }, 'УРОК ПРОЙДЕН'),
+        h('h3', {}, 'Отличная партия!'),
+        h('p', {}, 'Ты повторил дебют за ' + (course.side === 'w' ? 'белых' : 'чёрных') +
+          '. ' + (errors ? 'Попыток исправить ход: ' + errors + '.' : 'Все ходы найдены с первой попытки!')),
+        h('button', { class: 'btn btn-primary btn-block opening-completion-next',
+          onclick: () => nextChapter ? openChapter(nextChapter) : goCatalog() },
+          nextChapter ? 'Перейти к следующей главе' : 'К списку глав', icon('next')),
+        h('button', { class: 'btn btn-block opening-completion-retry',
+          onclick: () => setMode('practice') }, 'Ещё раз'))));
+      lastRenderedChapter = selected;
+      if (boardTop !== null && board.root.isConnected) {
+        const shift = board.root.getBoundingClientRect().top - boardTop;
+        if (Math.abs(shift) > 1) window.scrollBy(0, shift);
+      }
+      return;
+    }
+
     // Controls are directly below the board, before long explanations:
     // the user can keep the position and navigation visible together.
     if (mode === 'theory') {
@@ -351,12 +380,18 @@ export function mountGuidedOpening(root, course, onBack) {
           } }, 'Вернуться к основной линии'));
         else for (const item of alternatives) holder.append(
           h('button', { class: 'opening-branch', onclick: () => openVariation(item) },
-            h('b', {}, item.title), h('small', {}, item.why), icon('next')));
+            h('b', {}, item.title), h('small', {}, item.why),
+            h('span', { class: 'opening-branch-chevron', 'aria-hidden': 'true' }, '›')));
         root.append(holder);
       }
       if (ply >= moves.length && !variation) {
-        root.append(h('button', { class: 'btn btn-primary btn-block', onclick: () => setMode('practice') },
-          'Закрепить главу на практике', icon('next')));
+        const nextChapter = course.chapters[course.chapters.indexOf(selected) + 1];
+        root.append(h('div', { class: 'opening-end-actions' },
+          h('button', { class: 'btn btn-primary btn-block', onclick: () => setMode('practice') },
+            'Закрепить на практике', icon('next')),
+          h('button', { class: 'btn btn-block opening-next-chapter',
+            onclick: () => nextChapter ? openChapter(nextChapter) : goCatalog() },
+            nextChapter ? 'Следующая глава' : 'К списку глав', icon('next'))));
       }
     } else {
       const userToMove = game.turn() === course.side;
@@ -366,12 +401,7 @@ export function mountGuidedOpening(root, course, onBack) {
         h('p', {}, finished ? 'Результат сохранён на этом устройстве.' :
           'Сыграй фигурами на доске. Соперник отвечает автоматически по изученному варианту.'),
         feedback ? h('div', { class: 'banner ' + (finished ? 'ok' : 'info'), 'data-training-feedback': '' }, feedback) : null));
-      if (finished) {
-        const next = course.chapters[course.chapters.indexOf(selected) + 1];
-        root.append(h('button', { class: 'btn btn-primary btn-block', onclick: () =>
-          next ? openChapter(next) : goCatalog() },
-          next ? 'Следующая глава' : 'Все главы', icon('next')));
-      }
+
     }
 
     lastRenderedChapter = selected;
@@ -395,7 +425,7 @@ export function mountGuidedOpening(root, course, onBack) {
       stop();
       paintToken++;
       board.setInteractive(null);
-      root.classList.remove('opening-lesson-active');
+      root.classList.remove('opening-lesson-active', 'opening-practice-mode', 'opening-practice-finished');
     },
     refresh() { render(false); },
   };
