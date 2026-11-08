@@ -768,8 +768,25 @@ html, body, #app { touch-action: manipulation; }
   min-height: 47px;
 }
 
-/* Финал тренировки: лаконичная, но заметная анимация награды. */
+/* Финал тренировки показывается поверх доски, без скачка прокрутки. */
+.opening-completion-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  background: rgba(8, 17, 17, .70);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: manipulation;
+}
 .opening-completion {
+  width: min(100%, 430px);
+  max-height: 85dvh;
+  overflow-y: auto;
   isolation: isolate;
   position: relative;
   overflow: hidden;
