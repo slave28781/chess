@@ -43,6 +43,7 @@ export function mountGuidedOpening(root, course, onBack) {
   let finished = false;
   let destroyed = false;
   let paintToken = 0;
+  let lastRenderedChapter = null;
 
   const board = new Board(h('div'), { onMove: attemptMove });
 
@@ -230,8 +231,14 @@ export function mountGuidedOpening(root, course, onBack) {
 
   function render(animate = false) {
     if (destroyed) return;
+    // Safari can jump vertically when a focused Next/Back button is removed.
+    // Use the board as a visual anchor when stepping through the SAME chapter.
+    const boardTop = selected && lastRenderedChapter === selected && board.root.isConnected
+      ? board.root.getBoundingClientRect().top : null;
+    root.classList.toggle('opening-lesson-active', Boolean(selected));
     root.replaceChildren();
     if (!selected) {
+      lastRenderedChapter = null;
       const progress = readProgress()[course.id] || {};
       const done = course.chapters.filter((item) => progress[item.id]?.completed).length;
       root.append(
@@ -287,7 +294,7 @@ export function mountGuidedOpening(root, course, onBack) {
       class: 'board-wrap opening-board',
       // Защита от старых закэшированных стилей и Safari flex shrink-to-fit:
       // у внутренней .board дети позиционированы абсолютно.
-      style: { width: 'min(100%, 520px)', minWidth: '0', alignSelf: 'center' },
+      style: { width: 'min(100%, 42svh, 520px)', minWidth: '0', alignSelf: 'center' },
     }, board.root);
     const boardGuide = h('div', { class: 'opening-board-guide' },
       h('span', {}, 'Доска со стороны ' + (course.side === 'w' ? 'белых' : 'чёрных') + ' · координаты a–h / 1–8'),
@@ -295,6 +302,22 @@ export function mountGuidedOpening(root, course, onBack) {
     root.append(positionCard, boardWrap, boardGuide);
 
     markUpBoard(game, lastMove, animate, note);
+
+    // Controls are directly below the board, before long explanations:
+    // the user can keep the position and navigation visible together.
+    if (mode === 'theory') {
+      root.append(h('div', { class: 'opening-controls opening-controls-primary' },
+        h('button', { class: 'btn', disabled: ply === 0, onclick: () => step(-1) }, icon('prev'), 'Назад'),
+        h('button', { class: 'btn', onclick: autoplay },
+          icon(playing ? 'pause' : 'play'), playing ? 'Пауза' : 'Анимация'),
+        h('button', { class: 'btn btn-primary', disabled: ply >= moves.length, onclick: () => step(1) }, 'Дальше', icon('next'))));
+    } else {
+      const canHint = !finished && game.turn() === course.side;
+      root.append(h('div', { class: 'opening-controls opening-controls-primary' },
+        h('button', { class: 'btn', disabled: !canHint, onclick: hint }, icon('hint'), 'Подсказка'),
+        h('button', { class: 'btn', onclick: () => setMode('practice') }, 'Заново'),
+        h('button', { class: 'btn btn-primary', onclick: () => setMode('theory') }, 'Теория')));
+    }
 
     const moveStrip = h('div', { class: 'opening-moves', role: 'list', 'aria-label': 'Ходы дебюта' });
     moves.forEach((san, index) => {
@@ -318,12 +341,6 @@ export function mountGuidedOpening(root, course, onBack) {
       h('p', {}, explanation)));
 
     if (mode === 'theory') {
-      root.append(h('div', { class: 'opening-controls' },
-        h('button', { class: 'btn', disabled: ply === 0, onclick: () => step(-1) }, icon('prev'), 'Назад'),
-        h('button', { class: 'btn', onclick: autoplay },
-          icon(playing ? 'pause' : 'play'), playing ? 'Пауза' : 'Анимация'),
-        h('button', { class: 'btn btn-primary', disabled: ply >= moves.length, onclick: () => step(1) }, 'Дальше', icon('next'))));
-
       const alternatives = !variation ? selected.branches.filter((item) => item.at === ply) : [];
       if (alternatives.length || variation) {
         const holder = h('section', { class: 'opening-branches' }, h('h3', {}, 'А если соперник сыграет иначе?'));
@@ -348,17 +365,26 @@ export function mountGuidedOpening(root, course, onBack) {
           userToMove ? 'Твой ход: ' + (course.side === 'w' ? 'белыми' : 'чёрными') : 'Ход соперника…'),
         h('p', {}, finished ? 'Результат сохранён на этом устройстве.' :
           'Сыграй фигурами на доске. Соперник отвечает автоматически по изученному варианту.'),
-        feedback ? h('div', { class: 'banner ' + (finished ? 'ok' : 'info'), 'data-training-feedback': '' }, feedback) : null),
-      h('div', { class: 'opening-controls' },
-        h('button', { class: 'btn', disabled: finished || !userToMove, onclick: hint }, icon('hint'), 'Подсказка'),
-        h('button', { class: 'btn', onclick: () => setMode('practice') }, 'Заново'),
-        h('button', { class: 'btn btn-primary', onclick: () => setMode('theory') }, 'К объяснениям')));
+        feedback ? h('div', { class: 'banner ' + (finished ? 'ok' : 'info'), 'data-training-feedback': '' }, feedback) : null));
       if (finished) {
         const next = course.chapters[course.chapters.indexOf(selected) + 1];
         root.append(h('button', { class: 'btn btn-primary btn-block', onclick: () =>
           next ? openChapter(next) : goCatalog() },
           next ? 'Следующая глава' : 'Все главы', icon('next')));
       }
+    }
+
+    lastRenderedChapter = selected;
+    // The horizontal move list is an independent scroller. Center the current
+    // move without scrollIntoView(), which would also move the entire page.
+    const activeMove = moveStrip.querySelector('.opening-move.current');
+    if (activeMove) {
+      const offset = activeMove.offsetLeft - moveStrip.offsetLeft;
+      moveStrip.scrollLeft = Math.max(0, offset - (moveStrip.clientWidth - activeMove.offsetWidth) / 2);
+    }
+    if (boardTop !== null && board.root.isConnected) {
+      const shift = board.root.getBoundingClientRect().top - boardTop;
+      if (Math.abs(shift) > 1) window.scrollBy(0, shift);
     }
   }
 
@@ -369,6 +395,7 @@ export function mountGuidedOpening(root, course, onBack) {
       stop();
       paintToken++;
       board.setInteractive(null);
+      root.classList.remove('opening-lesson-active');
     },
     refresh() { render(false); },
   };
