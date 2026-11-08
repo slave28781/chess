@@ -311,7 +311,8 @@ export function mountGuidedOpening(root, course, onBack) {
 
     if (mode === 'practice' && finished) {
       const nextChapter = course.chapters[course.chapters.indexOf(selected) + 1];
-      root.append(h('section', { class: 'opening-completion', role: 'status', 'aria-live': 'polite' },
+      root.append(h('div', { class: 'opening-completion-overlay' },
+        h('section', { class: 'opening-completion', role: 'status', 'aria-live': 'polite' },
         h('span', { class: 'opening-completion-glow', 'aria-hidden': 'true' }),
         h('div', { class: 'opening-completion-medal', 'aria-hidden': 'true' }, '✓'),
         h('div', { class: 'opening-completion-eyebrow' }, 'УРОК ПРОЙДЕН'),
@@ -322,7 +323,7 @@ export function mountGuidedOpening(root, course, onBack) {
           onclick: () => nextChapter ? openChapter(nextChapter) : goCatalog() },
           nextChapter ? 'Перейти к следующей главе' : 'К списку глав', icon('next')),
         h('button', { class: 'btn btn-block opening-completion-retry',
-          onclick: () => setMode('practice') }, 'Ещё раз')));
+          onclick: () => setMode('practice') }, 'Ещё раз'))));
       lastRenderedChapter = selected;
       if (boardTop !== null && board.root.isConnected) {
         const shift = board.root.getBoundingClientRect().top - boardTop;
@@ -400,12 +401,7 @@ export function mountGuidedOpening(root, course, onBack) {
         h('p', {}, finished ? 'Результат сохранён на этом устройстве.' :
           'Сыграй фигурами на доске. Соперник отвечает автоматически по изученному варианту.'),
         feedback ? h('div', { class: 'banner ' + (finished ? 'ok' : 'info'), 'data-training-feedback': '' }, feedback) : null));
-      if (finished) {
-        const next = course.chapters[course.chapters.indexOf(selected) + 1];
-        root.append(h('button', { class: 'btn btn-primary btn-block', onclick: () =>
-          next ? openChapter(next) : goCatalog() },
-          next ? 'Следующая глава' : 'Все главы', icon('next')));
-      }
+
     }
 
     lastRenderedChapter = selected;
