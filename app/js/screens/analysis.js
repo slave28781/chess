@@ -3,7 +3,7 @@ import { Chess, START_FEN } from '../chess.js';
 import { Board } from '../board.js';
 import { parsePgn, writePgn } from '../pgn.js';
 import { reviewGame, classifyGame, extractPuzzles, toWhitePov, formatScore, winPercent, CLASSES, CLASS_ORDER, CLASS_NAG, uciLineToSan, terminalEval } from '../review.js';
-import { moveComment, gameSummary } from '../comments.js';
+import { moveComment, moveVisuals, gameSummary } from '../comments.js';
 import { classIconSvg } from '../icons.js';
 import { settings, games, puzzles, uid, profile as profileStore } from '../store.js';
 import { applyReview } from '../progress.js';
@@ -381,13 +381,19 @@ export function mountAnalysis(root, { go, params = {} }) {
     // Шапка с игроками
     root.append(playersHead());
 
+    // Текущий разобранный ход. Компактная тренерская карточка находится
+    // над доской и остаётся видимой при прокрутке.
+    const r = variation ? variation.moves[variation.idx - 1]?.evaluation
+      : (data && ply >= 0 ? data.moves[ply]
+        : record.source === 'free' && ply >= 0 ? record.moves[ply]?.evaluation : null);
+    if (data && !variation && r) root.append(moveCard(r, { coach: true }));
+
     // Доска
     const selectedAnimation = animationMs(settings.get().animation);
     board.setAnimation(selectedAnimation ? Math.max(100, Math.min(selectedAnimation, 180)) : 0);
     board.setPosition(c, { lastMove: lastMoveOf(c), animate });
     board.setInteractive(reviewing ? null : 'both');
     board.setCoords(settings.get().coords);
-    const r = variation ? variation.moves[variation.idx - 1]?.evaluation : (data && ply >= 0 ? data.moves[ply] : record.source === 'free' && ply >= 0 ? record.moves[ply]?.evaluation : null);
     const badge = r ? { square: r.uci.slice(2, 4), html: classIconSvg(r.cls), title: CLASSES[r.cls].label } : null;
     const fx = ++fxToken;
     const moveKey = variation ? variation.moves[variation.idx - 1] : record.moves[ply];
@@ -403,11 +409,9 @@ export function mountAnalysis(root, { go, params = {} }) {
     } else {
       board.setBadge(badge);
     }
-    const arrows = [];
-    if (r && r.bestMove && !['best', 'brilliant', 'great', 'book', 'forced', 'excellent'].includes(r.cls)) {
-      arrows.push({ from: r.bestMove.slice(0, 2), to: r.bestMove.slice(2, 4), color: '#81b64c', opacity: 0.9 });
-    }
-    board.setArrows(arrows);
+    // Не захламляем поле: визуальный тренер возвращает максимум 2–3
+    // действительно полезные стрелки для текущего хода.
+    board.setArrows(r ? moveVisuals(r) : []);
     root.append(h('div', { class: 'board-wrap' }, evalBar.el, board.root));
 
     // Вариант
@@ -437,11 +441,13 @@ export function mountAnalysis(root, { go, params = {} }) {
 
     if (record.moves.length && !variation) root.append(movesStrip());
 
-    // Карточка хода / движка
+    // Детали / движок. Основная оценка разобранного хода уже закреплена над доской.
     els.engineLine = null;
     if (reviewing) root.append(progressCard());
-    else if (data && !variation) root.append(moveCard(r));
-    else root.append(liveCard());
+    else if (data && !variation) {
+      if (!r) root.append(moveCard(null));
+      else root.append(noteCard(r));
+    } else root.append(liveCard());
 
     if (!data && !reviewing && record.moves.length) root.append(reviewStartCard());
 
@@ -493,9 +499,9 @@ export function mountAnalysis(root, { go, params = {} }) {
     return (c.turn() === 'w' ? `${n}. ` : `${n}… `) + fmt()(record.moves[p].san);
   }
 
-  function moveCard(r) {
+  function moveCard(r, { coach = false } = {}) {
     const f = fmt();
-    const card = h('div', { class: 'move-card' });
+    const card = h('div', { class: 'move-card' + (coach ? ' analysis-coach-card' : '') });
     if (!r) {
       const hd = record.headers || {};
       const lines = gameSummary(data, { w: hd.White, b: hd.Black }, f);
@@ -517,6 +523,19 @@ export function mountAnalysis(root, { go, params = {} }) {
         h('button', { class: 'chip', onclick: () => showBestLine(r) }, f(r.bestSan)),
         h('button', { class: 'btn btn-sm btn-ghost', style: { minHeight: '32px', padding: '0 8px' }, onclick: () => showBestLine(r) }, icon('eye'), 'Показать')));
     }
+    const visuals = moveVisuals(r);
+    if (coach && visuals.length) {
+      const bad = visuals.some((a) => a.kind === 'best' || a.kind === 'reply');
+      card.append(h('div', { class: 'analysis-coach-legend' },
+        bad
+          ? h('span', {}, h('i', { class: 'coach-dot best' }), 'лучший ход', h('i', { class: 'coach-dot reply' }), 'ответ соперника')
+          : h('span', {}, h('i', { class: 'coach-dot idea' }), 'что контролирует / атакует ход')));
+    }
+    return card;
+  }
+
+  function noteCard(r) {
+    const details = h('details', { class: 'analysis-note-card' });
     const note = h('textarea', { class: 'note', placeholder: 'Ваша заметка к этому ходу…', 'aria-label': 'Заметка к ходу' }, (record.notes && record.notes[r.ply]) || '');
     note.addEventListener('input', () => {
       record.notes = record.notes || {};
@@ -524,8 +543,8 @@ export function mountAnalysis(root, { go, params = {} }) {
       clearTimeout(noteTimer);
       noteTimer = setTimeout(() => { if (record.id && record.source !== 'free') games.save(record); }, 400);
     });
-    card.append(note);
-    return card;
+    details.append(h('summary', {}, 'Заметка к ходу'), note);
+    return details;
   }
 
   function liveCard() {
