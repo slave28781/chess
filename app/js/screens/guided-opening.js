@@ -294,7 +294,7 @@ export function mountGuidedOpening(root, course, onBack) {
       class: 'board-wrap opening-board',
       // Защита от старых закэшированных стилей и Safari flex shrink-to-fit:
       // у внутренней .board дети позиционированы абсолютно.
-      style: { width: 'min(100%, 42svh, 520px)', minWidth: '0', alignSelf: 'center' },
+      style: { width: 'min(100%, var(--opening-board-limit, 38svh), 520px)', minWidth: '0', alignSelf: 'center' },
     }, board.root);
     const boardGuide = h('div', { class: 'opening-board-guide' },
       h('span', {}, 'Доска со стороны ' + (course.side === 'w' ? 'белых' : 'чёрных') + ' · координаты a–h / 1–8'),
