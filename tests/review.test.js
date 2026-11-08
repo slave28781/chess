@@ -6,7 +6,7 @@ import {
   winPercent, winFor, moveAccuracy, formatScore, toWhitePov, mateFor,
   classifyGame, findSacrifice, terminalEval, extractPuzzles, uciLineToSan,
 } from '../app/js/review.js';
-import { moveComment, lineGain, findFork, whatMove, evalWords, gameSummary, materialWord } from '../app/js/comments.js';
+import { moveComment, moveVisuals, lineGain, findFork, whatMove, evalWords, gameSummary, materialWord } from '../app/js/comments.js';
 import { openingInfo, OPENING_LINES } from '../app/js/openings.js';
 import { sanToRu } from '../app/js/notation.js';
 
@@ -208,4 +208,31 @@ test('итоги партии: точность, ошибки, перелом', 
   assert.match(lines[1], /^Вы: точность \d+\.\d%, без ошибок\.$/);
   assert.match(lines[2], /^Конь: точность \d+\.\d%, 1 зевок\.$/);
   assert.equal(lines[3], 'Перелом: 3… Nf6?? — после него у белых форсированный мат.');
+});
+
+
+test('визуальный тренер: центральный ход показывает только контролируемые поля', () => {
+  const g = gameOf(['e4']);
+  const r = classifyGame(g, [ev('e2e4', 25), ev('e7e5', 25)]).moves[0];
+  const arrows = moveVisuals(r);
+  assert.equal(arrows.length, 2);
+  assert.deepEqual(arrows.map((a) => [a.from, a.to, a.kind]), [
+    ['e4', 'd5', 'control'],
+    ['e4', 'f5', 'control'],
+  ]);
+});
+
+test('визуальный тренер: ошибка показывает лучший ход и ответ соперника без лишних стрелок', () => {
+  const g = gameOf(['Qh4'], 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/3P1N2/PPP2PPP/RNBQKB1R b KQkq - 0 3');
+  const evals = [
+    ev('g8f6', 20),
+    { bestMove: 'f3h4', score: { cp: 900 }, lines: [{ move: 'f3h4', score: { cp: 900 }, pv: ['f3h4'] }] },
+  ];
+  const r = classifyGame(g, evals).moves[0];
+  const arrows = moveVisuals(r);
+  assert.deepEqual(arrows.map((a) => [a.from, a.to, a.kind]), [
+    ['g8', 'f6', 'best'],
+    ['f3', 'h4', 'reply'],
+  ]);
+  assert.ok(arrows.length <= 2, 'ошибка не захламляет доску');
 });

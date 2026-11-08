@@ -145,6 +145,76 @@ function betterMove(r, fmt, lead) {
   return `${lead} ${best}${rest} — ${why}.`;
 }
 
+// Небольшой набор визуальных подсказок для доски при разборе.
+// Не больше трёх стрелок: идея текущего хода ИЛИ лучший ход + наказание.
+// Цвета: золото — смысл/контроль, зелёный — лучший ход, оранжевый — ответ соперника.
+export function moveVisuals(r) {
+  if (!r || !r.uci || !r.fenBefore) return [];
+  const arrows = [];
+  const bad = ['inaccuracy', 'mistake', 'blunder', 'miss'].includes(r.cls);
+  if (bad) {
+    if (r.bestMove && r.bestMove.length >= 4) {
+      arrows.push({
+        from: r.bestMove.slice(0, 2), to: r.bestMove.slice(2, 4),
+        color: '#81b64c', opacity: 0.92, kind: 'best',
+      });
+    }
+    const reply = r.replyPv && r.replyPv[0];
+    if (reply && reply.length >= 4) {
+      arrows.push({
+        from: reply.slice(0, 2), to: reply.slice(2, 4),
+        color: '#e6912c', opacity: 0.82, kind: 'reply',
+      });
+    }
+    return arrows.slice(0, 2);
+  }
+
+  const g = new Chess(r.fenBefore);
+  const mover = g.turn();
+  const mv = g.move(r.uci);
+  if (!mv) return [];
+
+  // Если ход сразу создаёт нападение на ценную фигуру — показываем его.
+  const targets = g.attacksFrom(mv.to)
+    .map((square) => ({ square, piece: g.get(square) }))
+    .filter((x) => x.piece && x.piece.color !== mover && x.piece.type !== 'p')
+    .sort((a, b) => PIECE_VALUES[b.piece.type] - PIECE_VALUES[a.piece.type])
+    .slice(0, 2);
+  for (const target of targets) {
+    arrows.push({ from: mv.to, to: target.square, color: '#e2b86d', opacity: 0.8, kind: 'idea' });
+  }
+  if (arrows.length) return arrows;
+
+  // Для раннего центрального хода пешкой визуализируем контролируемые поля.
+  if (mv.piece === 'p' && r.ply < 16 && ['c4', 'd4', 'e4', 'c5', 'd5', 'e5'].includes(mv.to)) {
+    const file = mv.to.charCodeAt(0);
+    const rank = Number(mv.to[1]);
+    const dr = mover === 'w' ? 1 : -1;
+    for (const df of [-1, 1]) {
+      const nf = file + df, nr = rank + dr;
+      if (nf >= 97 && nf <= 104 && nr >= 1 && nr <= 8) {
+        arrows.push({
+          from: mv.to, to: String.fromCharCode(nf) + nr,
+          color: '#e2b86d', opacity: 0.72, kind: 'control',
+        });
+      }
+    }
+  }
+
+  // Для развивающейся лёгкой фигуры показываем до двух центральных полей,
+  // которые она теперь контролирует. Это полезнее, чем рисовать все лучи.
+  if (!arrows.length && r.ply < 20 && (mv.piece === 'n' || mv.piece === 'b')) {
+    const central = new Set(['d4', 'e4', 'd5', 'e5']);
+    for (const square of g.attacksFrom(mv.to)) {
+      if (central.has(square)) {
+        arrows.push({ from: mv.to, to: square, color: '#e2b86d', opacity: 0.72, kind: 'control' });
+        if (arrows.length >= 2) break;
+      }
+    }
+  }
+  return arrows.slice(0, 2);
+}
+
 export function moveComment(r, fmt = (s) => s) {
   const myMate = mateFor(r.scoreAfter, r.color);
   const mateNote = myMate ? ` Впереди ${mateText(myMate)}${r.replyLine.length ? ': ' + line(r.replyLine, fmt) : ''}.` : '';
