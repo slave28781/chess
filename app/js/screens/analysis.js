@@ -46,6 +46,7 @@ export function mountAnalysis(root, { go, params = {} }) {
   let shownPly = null;
   let highlightUntil = 0;
   let moveEvalToken = 0, evaluatingMove = false;
+  let bestLineToken = 0, bestLineTimer = null;
 
   const board = new Board(h('div'), { onMove: (m, o) => boardMove(m, o) });
   const evalBar = new EvalBar();
@@ -149,8 +150,17 @@ export function mountAnalysis(root, { go, params = {} }) {
     }
   }
 
+  function stopBestLine() {
+    bestLineToken++;
+    if (bestLineTimer !== null) {
+      clearTimeout(bestLineTimer);
+      bestLineTimer = null;
+    }
+  }
+
   // ---------- Навигация ----------
   function nav(where) {
+    stopBestLine();
     if (!record || Date.now() < highlightUntil) return;
     if (variation) {
       if (where === 'prev') { variation.idx--; if (variation.idx <= 0) { ply = variation.basePly; variation = null; } }
@@ -171,6 +181,7 @@ export function mountAnalysis(root, { go, params = {} }) {
 
   function goPly(p, { scrollToBoard = false } = {}) {
     if (Date.now() < highlightUntil) return;
+    stopBestLine();
     variation = null;
     ply = p;
     const c = chessAt();
@@ -183,17 +194,43 @@ export function mountAnalysis(root, { go, params = {} }) {
     }
   }
 
-  // Показать лучшую линию движка как вариант от позиции перед ходом.
+  // «Показать» не телепортирует фигуры: проигрываем лучший вариант плавно.
+  // До четырёх полуходов достаточно, чтобы увидеть идею, но не затянуть разбор.
   function showBestLine(r) {
     if (Date.now() < highlightUntil) return;
+    stopBestLine();
     const ev = record.review.evals[r.ply];
     const pv = ev.lines[0] ? ev.lines[0].pv : [ev.bestMove];
     const c = new Chess(r.fenBefore);
     const moves = [];
-    for (const u of pv.slice(0, 8)) { const mv = c.move(u); if (!mv) break; moves.push({ san: mv.san, uci: mv.uci }); }
+    for (const u of pv.slice(0, 4)) {
+      const mv = c.move(u);
+      if (!mv) break;
+      moves.push({ san: mv.san, uci: mv.uci });
+    }
     if (!moves.length) return;
-    variation = { basePly: r.ply - 1, moves, idx: 1 };
-    render();
+
+    const token = ++bestLineToken;
+    variation = { basePly: r.ply - 1, moves, idx: 0 };
+    render({ animate: false });
+
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const delay = reduced ? 0 : 620;
+    const advance = () => {
+      if (destroyed || token !== bestLineToken || !variation) return;
+      if (variation.idx >= variation.moves.length) { bestLineTimer = null; return; }
+      variation.idx++;
+      const cNow = chessAt();
+      const last = cNow.history().at(-1);
+      if (last) playSound(soundForMove(last, cNow));
+      render({ animate: !reduced });
+      if (variation && variation.idx < variation.moves.length) {
+        bestLineTimer = setTimeout(advance, delay);
+      } else {
+        bestLineTimer = null;
+      }
+    };
+    bestLineTimer = setTimeout(advance, reduced ? 0 : 180);
   }
 
   // ---------- Разбор ----------
@@ -378,11 +415,13 @@ export function mountAnalysis(root, { go, params = {} }) {
     const keepY = window.scrollY;
     root.innerHTML = '';
 
-    // Шапка с игроками
-    root.append(playersHead());
+    // В разборе не тратим высоту на отдельную карточку точности игроков:
+    // преимущество всегда видно по вертикальному eval-bar слева от доски.
+    // В свободном анализе оставляем только компактные управляющие кнопки.
+    if (record.source === 'free') root.append(playersHead());
 
-    // Текущий разобранный ход. Компактная тренерская карточка находится
-    // над доской и остаётся видимой при прокрутке.
+    // Текущий разобранный ход. Карточка находится над доской в обычном потоке
+    // и не ездит за пользователем при прокрутке.
     const r = variation ? variation.moves[variation.idx - 1]?.evaluation
       : (data && ply >= 0 ? data.moves[ply]
         : record.source === 'free' && ply >= 0 ? record.moves[ply]?.evaluation : null);
@@ -441,7 +480,12 @@ export function mountAnalysis(root, { go, params = {} }) {
 
     if (record.moves.length && !variation) root.append(movesStrip());
 
-    // Детали / движок. Основная оценка разобранного хода уже закреплена над доской.
+    // Сразу после компактной ленты ходов — график преимущества по партии.
+    if (data && !reviewing) {
+      root.append(evalGraph(record.review.evals, data.moves, variation ? -2 : ply, (p) => goPly(p)));
+    }
+
+    // Вторичные детали ниже графика, чтобы основной экран оставался компактным.
     els.engineLine = null;
     if (reviewing) root.append(progressCard());
     else if (data && !variation) {
@@ -451,10 +495,7 @@ export function mountAnalysis(root, { go, params = {} }) {
 
     if (!data && !reviewing && record.moves.length) root.append(reviewStartCard());
 
-    if (data && !reviewing) {
-      root.append(evalGraph(record.review.evals, data.moves, variation ? -2 : ply, (p) => goPly(p)));
-    }
-    if (record.moves.length) root.append(moveListCard());
+    // Большая таблица всех ходов убрана: для навигации достаточно горизонтальной ленты.
     if (data && !reviewing) root.append(countsCard());
     root.append(actionsCard());
 
