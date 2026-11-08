@@ -785,6 +785,7 @@ export function mountAnalysis(root, { go, params = {} }) {
       window.removeEventListener('keydown', onKey);
       if (reviewing) reviewing.cancel();
       moveEvalToken++;
+      stopBestLine();
       stopLive();
     },
     refresh() { render({ animate: false }); },
