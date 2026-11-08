@@ -651,7 +651,8 @@ main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; -
 /* Ширина обязательна: flex-обёртка с абсолютными дочерними элементами
    без неё схлопывается до нуля на мобильном Safari. */
 .board-wrap.opening-board {
-  width: min(100%, 520px);
+  --opening-board-limit: 38svh;
+  width: min(100%, var(--opening-board-limit), 520px);
   min-width: 0;
   max-width: 520px;
   margin: 0 auto;
@@ -709,9 +710,29 @@ main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; -
 @media (min-width: 700px) {
   .opening-hero, .opening-principles, .opening-lesson-head, .opening-explanation, .opening-branches { padding: 23px; }
   .opening-chapters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .board-wrap.opening-board { width: min(100%, 510px); }
+  .board-wrap.opening-board { --opening-board-limit: 510px; width: min(100%, 510px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .opening-explanation { animation: none; }
   .opening-chapter, .opening-branch, .opening-progress-track span { transition: none; }
 }
+
+/* Компактный урок: доска и навигация помещаются вместе на телефоне. */
+@media (max-width: 699px) {
+  main#view.opening-lesson-active { gap: 9px; padding-top: 8px; }
+  .opening-lesson-active .opening-lesson-head { gap: 7px; padding: 13px 15px; }
+  .opening-lesson-active .opening-lesson-head h2 { font-size: 21px; line-height: 1.18; }
+  .opening-lesson-active .opening-lesson-head p {
+    font-size: 13px; line-height: 1.45;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .opening-lesson-active .opening-board-guide { font-size: 11px; line-height: 1.35; }
+  .opening-lesson-active .opening-moves { padding: 3px 2px; }
+}
+.opening-controls-primary {
+  align-self: stretch;
+  min-width: 0;
+  padding: 4px 0;
+}
+.opening-controls-primary > .btn { min-height: 45px; }
