@@ -200,6 +200,80 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
 
 /* ---------- Разбор ---------- */
 .move-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
+
+.move-card.analysis-coach-card {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 70px);
+  z-index: 12;
+  min-height: 0;
+  gap: 6px;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, #8fb6d2 22%);
+  background: color-mix(in srgb, var(--surface) 94%, #16222a 6%);
+  box-shadow: 0 8px 22px rgba(0,0,0,.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.analysis-coach-card .mc-head { gap: 9px; }
+.analysis-coach-card .mc-title { font-size: 15px; }
+.analysis-coach-card .mc-move { font-size: 12px; }
+.analysis-coach-card .mc-text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.analysis-coach-card .mc-best { margin-top: 0; }
+.analysis-coach-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  font-size: 11px;
+  color: var(--faint);
+}
+.analysis-coach-legend > span { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.coach-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  display: inline-block;
+  flex: none;
+}
+.coach-dot.idea { background: #e2b86d; }
+.coach-dot.best { background: #81b64c; }
+.coach-dot.reply { background: #e6912c; }
+.analysis-note-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.analysis-note-card summary {
+  cursor: pointer;
+  touch-action: manipulation;
+  padding: 11px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+  list-style-position: inside;
+}
+.analysis-note-card[open] summary { color: var(--text); }
+.analysis-note-card .note {
+  margin: 0 12px 12px;
+  width: calc(100% - 24px);
+}
+@media (max-width: 699px) {
+  #view[data-screen="analysis"] > .analysis-coach-card {
+    top: calc(env(safe-area-inset-top) + 64px);
+  }
+  .analysis-coach-card .mc-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
 .mc-head { display: flex; align-items: center; gap: 10px; }
 .cls-icon { width: 26px; height: 26px; display: inline-grid; flex: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.35)); }
 .cls-icon svg { width: 100%; height: 100%; display: block; }
