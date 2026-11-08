@@ -702,7 +702,16 @@ main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; -
 .opening-branch { display: grid; grid-template-columns: 1fr 22px; gap: 5px 10px; }
 .opening-branch b { font-size: 14px; }
 .opening-branch small { grid-column: 1; color: #b6c0cc; line-height: 1.5; }
-.opening-branch svg { grid-column: 2; grid-row: 1 / span 2; }
+.opening-branch svg { grid-column: 2; grid-row: 1 / span 2; width: 20px; height: 20px; max-width: 100%; }
+.opening-branch, .opening-branches { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.opening-branch { grid-template-columns: minmax(0, 1fr) 22px; overflow: hidden; }
+.opening-branch b, .opening-branch small { min-width: 0; overflow-wrap: anywhere; }
+.opening-branch-chevron {
+  grid-column: 2; grid-row: 1 / span 2;
+  display: grid; place-items: center;
+  width: 22px; height: 26px; max-width: 22px;
+  line-height: 1; font-size: 28px; font-weight: 500; color: #c6d6e2;
+}
 .opening-practice-prompt { display: grid; gap: 9px; padding: 12px 4px; }
 .opening-practice-prompt strong { font-size: 17px; }
 .opening-practice-prompt p { margin: 0; color: var(--training-muted, var(--muted)); font-size: 13px; line-height: 1.6; }
@@ -736,3 +745,104 @@ main#view.training-screen { --training-bg: #151a20; --training-panel: #202730; -
   padding: 4px 0;
 }
 .opening-controls-primary > .btn { min-height: 45px; }
+
+
+/* Двойной тап не увеличивает страницу на iOS Safari. Жест масштабирования
+   двумя пальцами остаётся доступен в целях доступности. */
+html, body, #app { touch-action: manipulation; }
+
+/* В практике используем всю допустимую ширину доски, в отличие от компактной теории. */
+.opening-practice-mode .board-wrap.opening-board {
+  --opening-board-limit: calc(100vw - 32px);
+}
+@media (min-width: 700px) {
+  .opening-practice-mode .board-wrap.opening-board {
+    --opening-board-limit: 510px;
+  }
+}
+.opening-end-actions { display: grid; gap: 9px; }
+.opening-next-chapter {
+  background: #29363e;
+  color: #d1dee6;
+  border: 1px solid #42515b;
+  min-height: 47px;
+}
+
+/* Финал тренировки: лаконичная, но заметная анимация награды. */
+.opening-completion {
+  isolation: isolate;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 11px;
+  padding: 25px 18px 20px;
+  border: 1px solid #617f63;
+  border-radius: 20px;
+  background: linear-gradient(150deg, #263b33 0%, #202c2b 55%, #1d252b 100%);
+  animation: openingCompleteEnter .5s cubic-bezier(.17,.78,.24,1) both;
+}
+.opening-completion-glow {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: -150px;
+  transform: translateX(-50%);
+  width: 380px;
+  height: 300px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(158,214,143,.18), transparent 65%);
+}
+.opening-completion-medal {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #a9d390;
+  color: #203227;
+  font-size: 39px;
+  font-weight: 850;
+  box-shadow: 0 0 0 8px rgba(169,211,144,.10), 0 9px 28px rgba(0,0,0,.25);
+  animation: openingMedalAppear .7s cubic-bezier(.15,1.4,.32,1) both;
+}
+.opening-completion-eyebrow {
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .13em;
+  color: #a7da9b;
+}
+.opening-completion h3 {
+  margin: 0;
+  font-size: clamp(23px, 5vw, 28px);
+  letter-spacing: -.03em;
+  line-height: 1.2;
+}
+.opening-completion p {
+  margin: 0 0 6px;
+  color: #bdc9c6;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.opening-completion .btn { width: 100%; min-height: 49px; }
+.opening-completion-next { margin-top: 4px; }
+.opening-completion-retry {
+  border: 1px solid #465359;
+  background: #2c363b;
+  color: #d4dade;
+}
+.opening-practice-finished .opening-board > .board {
+  box-shadow: 0 0 0 3px rgba(169,211,144,.50), 0 10px 30px rgba(0,0,0,.32);
+}
+@keyframes openingCompleteEnter {
+  from { opacity: 0; transform: translateY(18px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes openingMedalAppear {
+  from { opacity: 0; transform: scale(.52) rotate(-16deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-completion, .opening-completion-medal { animation: none; }
+}
