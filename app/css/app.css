@@ -202,17 +202,13 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
 .move-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
 
 .move-card.analysis-coach-card {
-  position: sticky;
-  top: calc(env(safe-area-inset-top) + 70px);
-  z-index: 12;
+  position: static;
   min-height: 0;
   gap: 6px;
   padding: 11px 13px;
   border: 1px solid color-mix(in srgb, var(--line) 78%, #8fb6d2 22%);
   background: color-mix(in srgb, var(--surface) 94%, #16222a 6%);
-  box-shadow: 0 8px 22px rgba(0,0,0,.18);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.14);
 }
 .analysis-coach-card .mc-head { gap: 9px; }
 .analysis-coach-card .mc-title { font-size: 15px; }
@@ -263,9 +259,6 @@ textarea:focus, input[type=text]:focus { border-color: var(--accent); }
   width: calc(100% - 24px);
 }
 @media (max-width: 699px) {
-  #view[data-screen="analysis"] > .analysis-coach-card {
-    top: calc(env(safe-area-inset-top) + 64px);
-  }
   .analysis-coach-card .mc-text {
     display: -webkit-box;
     -webkit-line-clamp: 3;
@@ -936,4 +929,20 @@ html, body, #app { touch-action: manipulation; }
 }
 @media (prefers-reduced-motion: reduce) {
   .opening-completion, .opening-completion-medal { animation: none; }
+}
+
+
+/* Компактный Game Review: без отдельной карточки точности и длинной таблицы ходов. */
+#view[data-screen="analysis"] > .board-wrap .evalbar {
+  width: 12px;
+  border-radius: 4px;
+}
+#view[data-screen="analysis"] > .moves-strip {
+  min-height: 38px;
+  align-items: center;
+  padding: 0 2px 2px;
+}
+#view[data-screen="analysis"] > .moves-strip .mchip {
+  padding: 5px 8px;
+  font-size: 13.5px;
 }
