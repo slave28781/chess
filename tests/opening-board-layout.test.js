@@ -36,3 +36,35 @@ test('navigation stays beside the visible board instead of below changing explan
   assert.match(screen, /moveStrip\.scrollLeft\s*=/, 'center current move independently without moving page');
   assert.match(css, /main#view\.opening-lesson-active\s*\{[^}]*gap:/);
 });
+
+
+test('alternative opening lines cannot stretch the page with intrinsic SVG dimensions', () => {
+  assert.match(screen, /opening-branch-chevron/, 'branches use a compact chevron instead of unbounded SVG');
+  assert.match(css, /\.opening-branch-chevron\s*\{[^}]*width:\s*22px/s, 'chevron width is constrained');
+  assert.match(css, /\.opening-branch\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*22px/s);
+  assert.match(css, /\.opening-branch, \.opening-branches\s*\{[^}]*max-width:\s*100%/s);
+});
+
+test('double tap zoom is disabled, while pinch zoom remains available to the browser', () => {
+  assert.match(css, /html,\s*body,\s*#app\s*\{\s*touch-action:\s*manipulation;\s*\}/);
+  assert.doesNotMatch(css, /user-scalable\s*=\s*(?:no|0)/i);
+});
+
+test('practice has a full-size board and a replayable, accessible completion screen', () => {
+  assert.match(screen, /opening-practice-mode/);
+  assert.match(css, /\.opening-practice-mode \.board-wrap\.opening-board\s*\{\s*--opening-board-limit:\s*calc\(100vw - 32px\)/);
+  assert.match(screen, /opening-completion-overlay/);
+  assert.match(css, /\.opening-completion-overlay\s*\{[^}]*position:\s*fixed/s);
+  assert.match(screen, /Перейти к следующей главе/);
+  assert.match(screen, /opening-completion-retry[\s\S]*Ещё раз/);
+  assert.match(screen, /saveCompletion\(course\.id, selected\.id, errors\)/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*opening-completion-medal/s);
+});
+
+test('end of theory allows practice or skipping to the next chapter', () => {
+  const end = screen.indexOf("if (ply >= moves.length && !variation)");
+  const block = screen.slice(end, end + 750);
+  assert.match(block, /Закрепить на практике/);
+  assert.match(block, /Следующая глава/);
+  assert.ok(block.indexOf('Закрепить на практике') < block.indexOf('Следующая глава'));
+});
