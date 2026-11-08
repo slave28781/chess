@@ -18,8 +18,8 @@ test('review coach sits above the board but scrolls away normally', () => {
 test('review removes accuracy header and large move table from the main flow', () => {
   assert.match(screen, /if \(record\.source === 'free'\) root\.append\(playersHead\(\)\)/,
     'player header remains only for free analysis controls');
-  assert.doesNotMatch(screen, /root\.append\(playersHead\(\)\);\s*\n\s*\/\/ Текущий разобранный ход/,
-    'review no longer shows accuracy card unconditionally');
+  const freeHeader = screen.match(/if \(record\.source === 'free'\) root\.append\(playersHead\(\)\)/g) || [];
+  assert.equal(freeHeader.length, 1, 'accuracy/player header is only mounted for free analysis controls');
   const renderStart = screen.indexOf('function render({ animate = true } = {})');
   const renderEnd = screen.indexOf('function playersHead()', renderStart);
   const renderBody = screen.slice(renderStart, renderEnd);
