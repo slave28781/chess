@@ -25,10 +25,15 @@ test('every selectable piece skin has all 12 SVG files', () => {
   }
 });
 
-test('service worker caches every licensed piece set and not the removed AI sets', () => {
+test('service worker caches every licensed piece set and removed AI skins are gone', () => {
   const sw = readFileSync(new URL('../app/sw.js', import.meta.url), 'utf8');
+  const main = readFileSync(new URL('../app/js/main.js', import.meta.url), 'utf8');
   for (const id of expected.slice(1)) assert.match(sw, new RegExp(`['"]${id}['"]`));
-  for (const old of ['ivory', 'marble', 'royal', 'copper', 'ocean']) assert.doesNotMatch(sw, new RegExp(`['"]${old}['"]`));
+  for (const old of ['ivory', 'marble', 'royal', 'copper', 'ocean']) {
+    assert.doesNotMatch(sw, new RegExp(`['"]${old}['"]`));
+    assert.doesNotMatch(main, new RegExp(`['"]${old}['"]`));
+    assert.equal(existsSync(new URL(`../app/pieces/${old}/wK.svg`, import.meta.url)), false, `${old} assets should be removed`);
+  }
 });
 
 test('third-party asset manifest names every selectable set', () => {
