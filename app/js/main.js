@@ -2,6 +2,7 @@
 import { settings, puzzles, resetAll, profile as profileStore } from './store.js';
 import { THEMES, isThemeUnlocked, achievementById } from './progress.js';
 import { setSoundEnabled, playSound } from './sound.js';
+import { PIECE_SKINS, pieceAssetUrl, pieceSkinInfo, warmPieceSkin } from './piece-skins.js';
 import { h, append, icon, openSheet, segmented, switchEl, confirmSheet, getEngine, toast, applyTheme } from './ui.js';
 import { mountPlay } from './screens/play.js';
 import { mountOnline } from './screens/online.js';
@@ -33,6 +34,8 @@ function applySettings() {
   const theme = THEMES.find((t) => t.id === s.theme);
   // Стиль мог стать недоступен (например, после сброса наград) — вернуть зелёный.
   if (!theme || !isThemeUnlocked(p, theme)) settings.set({ theme: 'green' });
+  const selectedPieces = pieceSkinInfo(s.pieceSkin);
+  if (selectedPieces.id !== s.pieceSkin) settings.set({ pieceSkin: 'classic' });
   applyTheme(settings.get().theme);
   setSoundEnabled(s.sound);
 }
@@ -88,6 +91,41 @@ function settingsSheet() {
       }
     };
     drawSw(s.theme);
+
+    const pieceGrid = h('div', { class: 'piece-skin-grid' });
+    const previewPiece = (skin, code) => {
+      const url = pieceAssetUrl(skin.id, code);
+      if (skin.mode === 'mask') {
+        return h('i', {
+          class: 'piece-skin-mask ' + (code[0] === 'w' ? 'white' : 'black'),
+          style: { maskImage: `url("${url}")`, WebkitMaskImage: `url("${url}")` },
+        });
+      }
+      return h('img', { src: url, alt: '', loading: 'lazy' });
+    };
+    const drawPieceSkins = (selected) => {
+      pieceGrid.innerHTML = '';
+      for (const skin of PIECE_SKINS) {
+        pieceGrid.append(h('button', {
+          class: 'piece-skin-card' + (selected === skin.id ? ' on' : ''),
+          title: `${skin.name} · ${skin.license}`,
+          'aria-label': `Фигуры «${skin.name}»`,
+          onclick: () => {
+            settings.set({ pieceSkin: skin.id });
+            drawPieceSkins(skin.id);
+            warmPieceSkin(skin.id);
+            current?.refresh?.();
+          },
+        },
+        h('span', { class: 'piece-skin-preview' },
+          previewPiece(skin, 'wN'),
+          previewPiece(skin, 'bK')),
+        h('b', {}, skin.name),
+        h('small', {}, skin.license)));
+      }
+    };
+    drawPieceSkins(pieceSkinInfo(s.pieceSkin).id);
+
     append(sheet,
       h('h2', {}, 'Настройки'),
       h('div', {}, h('div', { class: 'label' }, 'Запись ходов'), segmented([['en', 'Nf3 (англ.)'], ['ru', 'Кf3 (рус.)']], s.notation, (v) => { settings.set({ notation: v }); current?.refresh?.(); })),
@@ -96,7 +134,10 @@ function settingsSheet() {
         segmented([['auto', 'Авто'], ['slow', 'Медл.'], ['normal', 'Обычн.'], ['fast', 'Быстро'], ['off', 'Нет']], s.animation, (v) => { settings.set({ animation: v }); current?.refresh?.(); }),
         h('div', { class: 'muted small', style: { marginTop: '6px' } }, 'Авто: в пуле мгновенно, в блице быстро, в рапиде и без часов — плавно.')),
       h('div', {}, h('div', { class: 'label' }, 'Доска · новые стили открываются наградами'), sw),
-      h('div', {}, h('div', { class: 'label' }, 'Фигуры'), segmented([['classic', 'Классика'], ['ivory', 'Слоновая кость'], ['marble', 'Мрамор']], ['classic', 'ivory', 'marble'].includes(s.pieceSkin) ? s.pieceSkin : '', v => { settings.set({ pieceSkin: v }); current?.refresh?.(); close(); settingsSheet(); }), segmented([['royal', 'Королевские'], ['copper', 'Медь'], ['ocean', 'Океан']], s.pieceSkin, v => { settings.set({ pieceSkin: v }); current?.refresh?.(); close(); settingsSheet(); })),
+      h('div', {},
+        h('div', { class: 'label' }, 'Фигуры · 17 свободных наборов'),
+        pieceGrid,
+        h('div', { class: 'muted small', style: { marginTop: '7px' } }, 'Свободные наборы Lichess. Выбранный стиль кэшируется для офлайн-игры.')),
       h('div', { class: 'toggle-row' }, h('span', {}, 'Звуки'), switchEl(s.sound, (v) => { settings.set({ sound: v }); applySettings(); if (v) playSound('move'); })),
       h('div', { class: 'toggle-row' }, h('span', {}, 'Координаты на доске'), switchEl(s.coords, (v) => { settings.set({ coords: v }); current?.refresh?.(); })),
       h('button', {
@@ -112,7 +153,7 @@ function settingsSheet() {
       }, 'Удалить все данные'),
       h('div', { class: 'about' },
         'Движок: Stockfish 18 (stockfish.js, GPL-3.0) — работает прямо на телефоне, без сервера. ',
-        'Фигуры: cburnett (GPLv2+). Значки ходов нарисованы для этого приложения. Код приложения: GPL-3.0. ',
+        'Фигуры: 17 свободных наборов из Lichess; авторы и лицензии — THIRD_PARTY_NOTICES.md. Значки ходов нарисованы для этого приложения. Код приложения: GPL-3.0. ',
         'Партии, рейтинг и заметки хранятся только на этом устройстве.'),
       h('button', { class: 'btn btn-block', onclick: close }, 'Готово'),
     );
