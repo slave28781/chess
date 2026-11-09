@@ -456,9 +456,14 @@ export function mountAnalysis(root, { go, params = {} }) {
           if (!response.ok) throw new Error(`Ошибка сервиса: ${response.status}`);
           const archives = (await response.json()).archives || [];
           if (!archives.length) { results.replaceChildren(h('p', {}, 'Партий не найдено')); return; }
-          const gamesResponse = await fetch(archives[archives.length - 1]);
-          if (!gamesResponse.ok) throw new Error(`Ошибка сервиса: ${gamesResponse.status}`);
-          list = ((await gamesResponse.json()).games || []).map((g) => normalizeChessComImport(g, name));
+          // Последние 20 партий могут лежать на границе месяцев — забираем
+          // архивы с конца по одному, пока не наберём достаточно.
+          list = [];
+          for (let i = archives.length - 1; i >= 0 && list.length < 20 && i >= archives.length - 3; i--) {
+            const gamesResponse = await fetch(archives[i]);
+            if (!gamesResponse.ok) throw new Error(`Ошибка сервиса: ${gamesResponse.status}`);
+            list.push(...((await gamesResponse.json()).games || []).map((g) => normalizeChessComImport(g, name)));
+          }
         }
 
         list = list.filter((g) => g.pgn).sort((a, b) => b.createdAt - a.createdAt).slice(0, 20);
