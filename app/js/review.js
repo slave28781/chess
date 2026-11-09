@@ -87,9 +87,15 @@ export function findSacrifice(fenBefore, uci) {
   if (!mv) return null;
   const took = mv.captured ? PIECE_VALUES[mv.captured] : 0;
   let best = null;
+  const legalCaptures = new Set(
+    g.moves().filter((m) => m.captured).map((m) => m.to)
+  );
   for (const p of g.threatenedPieces(mover)) {
     if (PIECE_VALUES[p.type] < 3) continue;
     if (p.square !== mv.to && hangingBefore.has(p.square)) continue;
+    // SEE ниже не учитывает связки, поэтому сначала требуем хотя бы одно
+    // реально легальное взятие этой фигуры в текущей позиции.
+    if (!legalCaptures.has(p.square)) continue;
     const net = p.gain - took;
     if (net >= 2 && (!best || net > best.net)) best = { square: p.square, type: p.type, net };
   }

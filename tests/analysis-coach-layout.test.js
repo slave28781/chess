@@ -7,7 +7,7 @@ const css = readFileSync(new URL('../app/css/app.css', import.meta.url), 'utf8')
 
 test('review coach sits above the board but scrolls away normally', () => {
   const coach = screen.indexOf("root.append(moveCard(r, { coach: true }))");
-  const board = screen.indexOf("root.append(h('div', { class: 'board-wrap' }");
+  const board = screen.indexOf("const boardWrap = h('div', { class: 'board-wrap' }");
   assert.ok(coach >= 0 && board >= 0 && coach < board, 'coach card must sit above board');
   assert.match(css, /\.move-card\.analysis-coach-card\s*\{[^}]*position:\s*static/s);
   assert.doesNotMatch(css, /\.move-card\.analysis-coach-card\s*\{[^}]*position:\s*sticky/s);
@@ -55,4 +55,23 @@ test('show best move animates a short engine line instead of teleporting', () =>
   assert.match(block, /playSound\(soundForMove\(last, cNow\)\)/);
   assert.match(screen, /stopBestLine\(\);[\s\S]*stopLive\(\);/,
     'playback is cancelled when leaving analysis');
+});
+
+
+test('next/previous navigation animates an attached board and keeps the viewport stable', () => {
+  const renderStart = screen.indexOf('function render({ animate = true } = {})');
+  const renderEnd = screen.indexOf('function playersHead()', renderStart);
+  const block = screen.slice(renderStart, renderEnd);
+  const append = block.indexOf('root.append(boardWrap)');
+  const position = block.indexOf('board.setPosition(c, { lastMove: lastMoveOf(c), animate })');
+  assert.ok(append >= 0 && position > append,
+    'board must be attached before piece transforms change so CSS can animate');
+  assert.match(block, /void board\.root\.offsetWidth/, 'old piece transforms are flushed before the animated move');
+  assert.match(block, /Math\.max\(240,\s*Math\.min\(selectedAnimation,\s*360\)\)/,
+    'review animation is visible instead of an abrupt 100–180ms jump');
+  assert.match(block, /oldBoardRect[\s\S]*anchorBoard/);
+  assert.match(block, /window\.scrollBy\(0, shift\)/,
+    'changing explanation height keeps the board anchored in the viewport');
+  assert.match(block, /document\.activeElement[\s\S]*\.blur\(\)/,
+    'removing a focused navigation button cannot make iOS relocate the viewport');
 });
