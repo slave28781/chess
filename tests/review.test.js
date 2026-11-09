@@ -106,11 +106,11 @@ test('жертва: ловушка Легаля — бриллиантовый �
 test('связанная фигура не превращает ход в ложную жертву', () => {
   // После Qe6 конь g7 псевдо-атакует ферзя, но связан ладьёй g6 с королём g8.
   // Nxe6 нелегален, поэтому ферзь фактически не отдан.
-  const fen = '6k1/6n1/6R1/8/5Q2/8/8/6K1 w - - 0 1';
+  const fen = '6k1/6n1/6R1/5Q2/8/8/8/6K1 w - - 0 1';
   const g = new Chess(fen);
-  assert.ok(g.move('f4e5'));
+  assert.ok(g.move('f5e6'));
   assert.equal(g.moves().some((m) => m.from === 'g7' && m.to === 'e6'), false);
-  assert.equal(findSacrifice(fen, 'f4e5'), null);
+  assert.equal(findSacrifice(fen, 'f5e6'), null);
 });
 
 test('обычное взятие — не жертва; размен с выгодой — не жертва', () => {
