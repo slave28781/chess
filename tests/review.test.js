@@ -103,6 +103,16 @@ test('жертва: ловушка Легаля — бриллиантовый �
   assert.equal(classifyGame(g, bad).moves[8].cls, 'blunder');
 });
 
+test('связанная фигура не превращает ход в ложную жертву', () => {
+  // После Qe6 конь g7 псевдо-атакует ферзя, но связан ладьёй g6 с королём g8.
+  // Nxe6 нелегален, поэтому ферзь фактически не отдан.
+  const fen = '6k1/6n1/6R1/8/4Q3/8/8/6K1 w - - 0 1';
+  const g = new Chess(fen);
+  assert.ok(g.move('e5e6'));
+  assert.equal(g.moves().some((m) => m.from === 'g7' && m.to === 'e6'), false);
+  assert.equal(findSacrifice(fen, 'e5e6'), null);
+});
+
 test('обычное взятие — не жертва; размен с выгодой — не жертва', () => {
   // Слон бьёт ферзя под защитой пешки: отдаём 3, взяли 9 — это выигрыш, а не жертва.
   assert.equal(findSacrifice('4k3/8/3p4/4q3/8/8/1B6/4K3 w - - 0 1', 'b2e5'), null);
