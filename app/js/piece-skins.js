@@ -2,6 +2,7 @@
 // Upstream прибит к конкретному коммиту, чтобы внешний вид не менялся без нашего PR.
 // Лицензии и авторы перечислены в /THIRD_PARTY_NOTICES.md.
 export const LICHESS_PIECE_COMMIT = '9ab61b48688f55f61c050b64322707a8c6f88f41';
+export const PIECE_CACHE = 'chess-piece-skins-' + LICHESS_PIECE_COMMIT.slice(0, 8);
 const RAW = `https://raw.githubusercontent.com/lichess-org/lila/${LICHESS_PIECE_COMMIT}/public/piece`;
 
 export const PIECE_SKINS = [
@@ -48,5 +49,9 @@ export function pieceSkinAssetUrls(id) {
 export async function warmPieceSkin(id) {
   const urls = pieceSkinAssetUrls(id);
   if (!urls.length || !navigator.onLine) return;
-  await Promise.allSettled(urls.map((url) => fetch(url, { mode: 'cors', cache: 'force-cache' })));
+  const cache = typeof caches !== 'undefined' ? await caches.open(PIECE_CACHE).catch(() => null) : null;
+  await Promise.allSettled(urls.map(async (url) => {
+    const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+    if (cache && res.ok) await cache.put(url, res.clone());
+  }));
 }
