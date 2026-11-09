@@ -3,6 +3,7 @@ import { Chess, START_FEN } from '../chess.js';
 import { Board } from '../board.js';
 import { LEVELS, chooseMove } from '../engine.js';
 import { writePgn } from '../pgn.js';
+import { reviewSearchOptions } from '../review.js';
 import { settings, currentPlay, games, uid, profile as profileStore } from '../store.js';
 import { OPPONENTS, isOpponentUnlocked, unlockText, applyGameResult } from '../progress.js';
 import { TIME_CONTROLS, CATEGORIES, timeControl, tcLabel, formatClock, isLowTime, engineBudget, animationMs, flagResult, humanThinkMs } from '../timecontrol.js';
@@ -277,7 +278,9 @@ export function mountPlay(root, { go, params = {} }) {
     try {
       toast('Ищу лучший ход…', 1500);
       const engine = await getEngine();
-      const res = await engine.analyse(chess.fen(), { depth: 14 });
+      // Подсказка обязана считать тем же профилем, что и пост-анализ.
+      // Иначе ход мог быть «лучшим» в партии на depth 14, а затем стать ?! на depth 16.
+      const res = await engine.analyse(chess.fen(), reviewSearchOptions(settings.get().depth, { multipv: 2 }));
       if (!res.bestMove || chess.turn() !== state.color) return;
       board.setArrows([{ from: res.bestMove.slice(0, 2), to: res.bestMove.slice(2, 4), color: '#5b8bd9' }]);
     } catch (e) {

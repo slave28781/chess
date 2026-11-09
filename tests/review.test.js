@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { Chess } from '../app/js/chess.js';
 import {
   winPercent, winFor, moveAccuracy, formatScore, toWhitePov, mateFor,
-  classifyGame, findSacrifice, terminalEval, extractPuzzles, uciLineToSan,
+  classifyGame, findSacrifice, terminalEval, extractPuzzles, uciLineToSan, reviewSearchOptions,
 } from '../app/js/review.js';
 import { moveComment, moveVisuals, lineGain, findFork, whatMove, evalWords, gameSummary, materialWord } from '../app/js/comments.js';
 import { openingInfo, OPENING_LINES } from '../app/js/openings.js';
@@ -21,6 +21,12 @@ const ev = (bestMove, cp, extra = []) => ({
   bestMove,
   score: typeof cp === 'object' ? cp : { cp },
   lines: [{ move: bestMove, score: typeof cp === 'object' ? cp : { cp }, pv: [bestMove] }, ...extra],
+});
+
+test('подсказка и пост-анализ используют один профиль Stockfish', () => {
+  assert.deepEqual(reviewSearchOptions(16), { depth: 16, movetime: 1400, multipv: 2 });
+  assert.deepEqual(reviewSearchOptions(20), { depth: 20, movetime: 2500, multipv: 2 });
+  assert.deepEqual(reviewSearchOptions(12, { multipv: 1 }), { depth: 12, movetime: 700, multipv: 1 });
 });
 
 test('шанс на победу: формула lichess, мат, симметрия', () => {

@@ -2,13 +2,14 @@
 import { Chess, START_FEN } from '../chess.js';
 import { Board } from '../board.js';
 import { parsePgn, writePgn } from '../pgn.js';
-import { reviewGame, classifyGame, extractPuzzles, toWhitePov, formatScore, winPercent, CLASSES, CLASS_ORDER, CLASS_NAG, uciLineToSan, terminalEval } from '../review.js';
+import { reviewGame, classifyGame, extractPuzzles, toWhitePov, formatScore, winPercent, CLASSES, CLASS_ORDER, CLASS_NAG, uciLineToSan, terminalEval, REVIEW_DEPTHS as DEPTHS, REVIEW_TIME_MS } from '../review.js';
 import { moveComment, moveVisuals, gameSummary } from '../comments.js';
 import { classIconSvg } from '../icons.js';
 import { settings, games, puzzles, uid, profile as profileStore } from '../store.js';
 import { applyReview } from '../progress.js';
 import { animationMs } from '../timecontrol.js';
 import { playSound, soundForMove } from '../sound.js';
+import { normalizeLichessImport, normalizeChessComImport, scoreLabel, importFavoriteKey, toggleImportFavorite } from '../import-games.js';
 import {
   h, icon, fmt, toast, openSheet, segmented, getEngine, EvalBar, evalGraph, clsIcon, resultText, pgnDate, confirmSheet, celebrate,
 } from '../ui.js';
@@ -26,8 +27,6 @@ const EXAMPLE = `[Event "Opera Game"]
 
 const FEN_RE = /^\s*[rnbqkpRNBQKP1-8]+(\/[rnbqkpRNBQKP1-8]+){7}\s+[wb]\b/;
 const NOTABLE = new Set(['brilliant', 'great', 'inaccuracy', 'mistake', 'miss', 'blunder']);
-const DEPTHS = { fast: 12, normal: 16, deep: 20 };
-const REVIEW_TIME_MS = { 12: 700, 16: 1400, 20: 2500 }; // Макс. время на позицию.
 function liveDepth(chess) {
   const moves = chess.movesCount();
   return chess.inCheck() || moves <= 12 ? 22 : moves >= 32 ? 16 : 20;
@@ -356,43 +355,138 @@ export function mountAnalysis(root, { go, params = {} }) {
   let els = {};
 
   function openLoadSheet() {
-    let myColor = settings.get().myColor || 'w';
+    const saved = settings.get();
+    let myColor = saved.myColor || 'w';
     const ta = h('textarea', { placeholder: 'Вставьте PGN партии (chess.com, lichess) или FEN позиции', 'aria-label': 'PGN или FEN', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off' });
-    const username = h('input', { placeholder: 'Ник на сайте', 'aria-label': 'Ник игрока', autocomplete: 'off' });
-    const source = h('select', { 'aria-label': 'Шахматный сайт' }, h('option', { value: 'lichess' }, 'Lichess'), h('option', { value: 'chesscom' }, 'Chess.com'));
-    const results = h('div', { class: 'stack' });
+    const username = h('input', { value: saved.importUsername || '', placeholder: 'Ник на сайте', 'aria-label': 'Ник игрока', autocomplete: 'off' });
+    const source = h('select', { 'aria-label': 'Шахматный сайт' },
+      h('option', { value: 'lichess' }, 'Lichess'),
+      h('option', { value: 'chesscom' }, 'Chess.com'));
+    source.value = saved.importSource === 'chesscom' ? 'chesscom' : 'lichess';
+
+    const favoriteBtn = h('button', { class: 'btn btn-sm import-favorite-toggle', 'aria-label': 'Добавить ник в избранное' }, '☆');
+    const favorites = h('div', { class: 'import-favorites' });
+    const results = h('div', { class: 'import-results' });
     let sheetClose;
+
+    const currentFavorite = () => ({ source: source.value, name: username.value.trim() });
+    const isFavorite = () => {
+      const key = importFavoriteKey(currentFavorite());
+      return (settings.get().importFavorites || []).some((x) => importFavoriteKey(x) === key);
+    };
+    const syncFavoriteButton = () => {
+      const active = !!username.value.trim() && isFavorite();
+      favoriteBtn.textContent = active ? '★' : '☆';
+      favoriteBtn.classList.toggle('on', active);
+      favoriteBtn.setAttribute('aria-label', active ? 'Убрать ник из избранного' : 'Добавить ник в избранное');
+    };
+    const sourceName = (id) => id === 'chesscom' ? 'Chess.com' : 'Lichess';
+
+    function renderFavorites() {
+      favorites.replaceChildren();
+      const list = settings.get().importFavorites || [];
+      if (!list.length) return;
+      favorites.append(h('span', { class: 'muted small' }, 'Избранное'));
+      for (const fav of list) {
+        favorites.append(h('button', {
+          class: 'import-favorite-chip',
+          onclick: () => {
+            source.value = fav.source;
+            username.value = fav.name;
+            settings.set({ importSource: fav.source, importUsername: fav.name });
+            syncFavoriteButton();
+            loadGames();
+          },
+        }, h('span', {}, '★'), `${sourceName(fav.source)} · ${fav.name}`));
+      }
+    }
+
+    favoriteBtn.onclick = () => {
+      const item = currentFavorite();
+      if (!item.name) { toast('Сначала введите ник'); return; }
+      const list = toggleImportFavorite(settings.get().importFavorites, item);
+      settings.set({ importFavorites: list, importSource: item.source, importUsername: item.name });
+      renderFavorites();
+      syncFavoriteButton();
+    };
+    username.addEventListener('input', syncFavoriteButton);
+    source.addEventListener('change', () => {
+      settings.set({ importSource: source.value, importUsername: username.value.trim() });
+      syncFavoriteButton();
+    });
+
+    function gameButton(game) {
+      const whiteMine = game.myColor === 'w';
+      const blackMine = game.myColor === 'b';
+      const rating = (v) => v ? String(v) : '—';
+      return h('button', {
+        class: 'import-game-card',
+        onclick: () => {
+          const color = game.myColor || myColor;
+          if (game.myColor) {
+            myColor = game.myColor;
+            settings.set({ myColor: game.myColor });
+          }
+          sheetClose();
+          submitText(game.pgn, color);
+        },
+      },
+      h('div', { class: 'import-game-match' },
+        h('span', { class: 'import-player' + (whiteMine ? ' mine' : '') },
+          h('b', {}, '⚪ ', game.white), whiteMine ? h('em', {}, 'вы') : null, h('small', {}, rating(game.whiteRating))),
+        h('span', { class: 'import-vs' }, 'VS'),
+        h('span', { class: 'import-player right' + (blackMine ? ' mine' : '') },
+          h('b', {}, '⚫ ', game.black), blackMine ? h('em', {}, 'вы') : null, h('small', {}, rating(game.blackRating))),
+        h('strong', { class: 'import-score' }, scoreLabel(game.result))));
+    }
+
     async function loadGames() {
       const name = username.value.trim();
-      if (!/^[a-zA-Z0-9_-]{2,30}$/.test(name)) { toast('Проверьте ник игрока'); return; }
-      results.replaceChildren(h('p', {}, 'Загрузка партий…'));
+      if (!/^[a-zA-Z0-9_.-]{2,30}$/.test(name)) { toast('Проверьте ник игрока'); return; }
+      results.replaceChildren(h('p', { class: 'muted' }, 'Загрузка партий…'));
       try {
         let list;
         if (source.value === 'lichess') {
           const response = await fetch(`https://lichess.org/api/games/user/${encodeURIComponent(name)}?max=20&pgnInJson=true`, { headers: { Accept: 'application/x-ndjson' } });
           if (!response.ok) throw new Error(`Ошибка сервиса: ${response.status}`);
-          list = (await response.text()).trim().split('\n').filter(Boolean).map((line) => { const g = JSON.parse(line); return { pgn: g.pgn, label: `${g.players?.white?.user?.name || 'Белые'} — ${g.players?.black?.user?.name || 'Чёрные'}` }; });
+          list = (await response.text()).trim().split('\n').filter(Boolean)
+            .map((line) => normalizeLichessImport(JSON.parse(line), name));
         } else {
           const response = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(name)}/games/archives`);
           if (!response.ok) throw new Error(`Ошибка сервиса: ${response.status}`);
           const archives = (await response.json()).archives || [];
           if (!archives.length) { results.replaceChildren(h('p', {}, 'Партий не найдено')); return; }
-          const gamesResponse = await fetch(archives[archives.length - 1]);
-          if (!gamesResponse.ok) throw new Error(`Ошибка сервиса: ${gamesResponse.status}`);
-          list = ((await gamesResponse.json()).games || []).slice(-20).reverse().map((g) => ({ pgn: g.pgn, label: `${g.white?.username || 'Белые'} — ${g.black?.username || 'Чёрные'}` }));
+          // Последние 20 партий могут лежать на границе месяцев — забираем
+          // архивы с конца по одному, пока не наберём достаточно.
+          list = [];
+          for (let i = archives.length - 1; i >= 0 && list.length < 20 && i >= archives.length - 3; i--) {
+            const gamesResponse = await fetch(archives[i]);
+            if (!gamesResponse.ok) throw new Error(`Ошибка сервиса: ${gamesResponse.status}`);
+            list.push(...((await gamesResponse.json()).games || []).map((g) => normalizeChessComImport(g, name)));
+          }
         }
+
+        list = list.filter((g) => g.pgn).sort((a, b) => b.createdAt - a.createdAt).slice(0, 20);
+        settings.set({ importSource: source.value, importUsername: name });
+        syncFavoriteButton();
         results.replaceChildren();
-        for (const game of list.filter((g) => g.pgn)) results.append(h('button', { class: 'btn btn-block', onclick: () => { sheetClose(); submitText(game.pgn, myColor); } }, game.label));
-        if (!results.childNodes.length) results.append(h('p', {}, 'Партий не найдено'));
-      } catch (e) { results.replaceChildren(h('p', {}, `Не удалось загрузить партии: ${e.message}`)); }
+        for (const game of list) results.append(gameButton(game));
+        if (!list.length) results.append(h('p', {}, 'Партий не найдено'));
+      } catch (e) {
+        results.replaceChildren(h('p', {}, `Не удалось загрузить партии: ${e.message}`));
+      }
     }
+
+    renderFavorites();
+    syncFavoriteButton();
     openSheet((sheet, close) => { sheetClose = close; sheet.append(
       h('div', { class: 'stack' },
         h('h2', {}, 'Разбор партии'),
         h('p', { style: { margin: 0 } }, 'Stockfish 18 оценит каждый ход: от 💎 бриллиантовых до ?? зевков, посчитает точность и объяснит ошибки.'),
         ta,
-        h('div', { class: 'label' }, 'Импорт по нику (последние партии)'),
-        h('div', { class: 'row' }, source, username),
+        h('div', { class: 'label' }, 'Импорт по нику · последние 20 партий'),
+        h('div', { class: 'import-player-search' }, source, username, favoriteBtn),
+        favorites,
         h('button', { class: 'btn btn-block', onclick: loadGames }, 'Найти партии'),
         results,
         h('div', { class: 'row' },

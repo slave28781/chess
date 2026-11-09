@@ -4,6 +4,18 @@ import { Chess, PIECE_VALUES } from './chess.js';
 import { openingInfo } from './openings.js';
 
 // Пороги потери шансов на победу (в процентных пунктах) для каждой оценки хода.
+export const REVIEW_DEPTHS = { fast: 12, normal: 16, deep: 20 };
+export const REVIEW_TIME_MS = { 12: 700, 16: 1400, 20: 2500 };
+
+export function reviewSearchOptions(depth = 16, { multipv = 2, movetime } = {}) {
+  const d = Number(depth) || 16;
+  return {
+    depth: d,
+    movetime: movetime ?? REVIEW_TIME_MS[d] ?? 1400,
+    multipv,
+  };
+}
+
 export const THRESHOLDS = { excellent: 2, good: 5, inaccuracy: 10, mistake: 20 };
 
 export const CLASSES = {
@@ -235,7 +247,7 @@ export async function reviewGame(engine, game, { depth = 14, movetime, onProgres
     if (term) { evals.push(term); }
     else {
       const turn = new Chess(fens[i]).turn();
-      const res = await engine.analyse(fens[i], { depth, movetime, multipv: 2 });
+      const res = await engine.analyse(fens[i], reviewSearchOptions(depth, { movetime, multipv: 2 }));
       const lines = res.lines.map((l) => ({ move: l.pv[0], score: toWhitePov(l.score, turn), pv: l.pv.slice(0, 10) }));
       evals.push({ bestMove: res.bestMove, score: lines[0] ? lines[0].score : { cp: 0 }, lines, depth });
     }
