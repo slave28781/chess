@@ -413,6 +413,9 @@ export function mountAnalysis(root, { go, params = {} }) {
     const f = fmt();
     const c = chessAt();
     const keepY = window.scrollY;
+    const oldBoardRect = board.root.isConnected ? board.root.getBoundingClientRect() : null;
+    const anchorBoard = !!oldBoardRect && oldBoardRect.bottom > 0 && oldBoardRect.top < window.innerHeight;
+    if (document.activeElement && root.contains(document.activeElement)) document.activeElement.blur();
     root.innerHTML = '';
 
     // В разборе не тратим высоту на отдельную карточку точности игроков:
@@ -427,12 +430,17 @@ export function mountAnalysis(root, { go, params = {} }) {
         : record.source === 'free' && ply >= 0 ? record.moves[ply]?.evaluation : null);
     if (data && !variation && r) root.append(moveCard(r, { coach: true }));
 
-    // Доска
+    // Доска. Сначала возвращаем прежний DOM доски в документ, а уже потом
+    // меняем позицию: так CSS transition действительно видит старое и новое положение фигур.
     const selectedAnimation = animationMs(settings.get().animation);
-    board.setAnimation(selectedAnimation ? Math.max(100, Math.min(selectedAnimation, 180)) : 0);
+    board.setAnimation(selectedAnimation ? Math.max(240, Math.min(selectedAnimation, 360)) : 0);
+    board.setCoords(settings.get().coords);
+    const boardWrap = h('div', { class: 'board-wrap' }, evalBar.el, board.root);
+    root.append(boardWrap);
+    if (animate && selectedAnimation) void board.root.offsetWidth;
     board.setPosition(c, { lastMove: lastMoveOf(c), animate });
     board.setInteractive(reviewing ? null : 'both');
-    board.setCoords(settings.get().coords);
+
     const badge = r ? { square: r.uci.slice(2, 4), html: classIconSvg(r.cls), title: CLASSES[r.cls].label } : null;
     const fx = ++fxToken;
     const moveKey = variation ? variation.moves[variation.idx - 1] : record.moves[ply];
@@ -451,7 +459,6 @@ export function mountAnalysis(root, { go, params = {} }) {
     // Не захламляем поле: визуальный тренер возвращает максимум 2–3
     // действительно полезные стрелки для текущего хода.
     board.setArrows(r ? moveVisuals(r) : []);
-    root.append(h('div', { class: 'board-wrap' }, evalBar.el, board.root));
 
     // Вариант
     if (variation) {
@@ -499,7 +506,14 @@ export function mountAnalysis(root, { go, params = {} }) {
     if (data && !reviewing) root.append(countsCard());
     root.append(actionsCard());
 
-    window.scrollTo(0, keepY);
+    // Карточка объяснения меняет высоту от хода к ходу. Пока доска видна,
+    // держим её на том же месте экрана, а не сохраняем голый scrollY.
+    if (anchorBoard && board.root.isConnected) {
+      const shift = board.root.getBoundingClientRect().top - oldBoardRect.top;
+      if (Math.abs(shift) > 0.5) window.scrollBy(0, shift);
+    } else {
+      window.scrollTo(0, keepY);
+    }
     const curChip = root.querySelector('.mchip.cur');
     if (curChip) curChip.parentElement.scrollLeft = curChip.offsetLeft - curChip.parentElement.clientWidth / 2 + curChip.clientWidth / 2;
 
