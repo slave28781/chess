@@ -38,7 +38,7 @@ test('service worker caches every licensed piece set and removed AI skins are go
 
 test('third-party asset manifest names every selectable set', () => {
   const licenses = readFileSync(new URL('../THIRD_PARTY_ASSETS.md', import.meta.url), 'utf8');
-  for (const id of expected) assert.match(licenses, new RegExp(`\\|${id.replace('-', '\\-')}\\|`));
+  for (const id of expected) assert.ok(licenses.includes(`\`${id}\``), `license manifest must mention ${id}`);
   assert.match(licenses, /Apache-2\.0/);
   assert.match(licenses, /GPL-2\.0-or-later/);
   assert.match(licenses, /CC0-1\.0/);
