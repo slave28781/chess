@@ -1,4 +1,5 @@
 import { settings } from './store.js';
+import { pieceAssetUrl, pieceSkinInfo } from './piece-skins.js';
 // Доска: фигуры с анимацией, ходы тапом и перетаскиванием, подсветки, стрелки, значки силы хода.
 // Доска не меняет партию сама: сообщает о ходе через onMove, хозяин партии вызывает setPosition.
 
@@ -125,15 +126,34 @@ export class Board {
   }
 
   _pieceUrl(code) {
-    const skin = settings.get().pieceSkin;
-    const folder = ['ivory', 'marble', 'royal', 'copper', 'ocean'].includes(skin) ? skin + '/' : '';
-    return `${this.pieceBase}${folder}${code[0]}${code[1].toUpperCase()}.svg`;
+    return pieceAssetUrl(settings.get().pieceSkin, code, this.pieceBase);
+  }
+
+  _applyPieceStyle(el, code) {
+    const skin = pieceSkinInfo(settings.get().pieceSkin);
+    const url = this._pieceUrl(code);
+    if (skin.mode === 'mask') {
+      el.style.backgroundImage = 'none';
+      el.style.backgroundColor = code[0] === 'w' ? '#f4f4f4' : '#20242a';
+      el.style.maskImage = `url("${url}")`;
+      el.style.webkitMaskImage = `url("${url}")`;
+      el.style.maskSize = el.style.webkitMaskSize = '100% 100%';
+      el.style.maskRepeat = el.style.webkitMaskRepeat = 'no-repeat';
+      el.style.maskPosition = el.style.webkitMaskPosition = 'center';
+    } else {
+      el.style.maskImage = el.style.webkitMaskImage = '';
+      el.style.maskSize = el.style.webkitMaskSize = '';
+      el.style.maskRepeat = el.style.webkitMaskRepeat = '';
+      el.style.maskPosition = el.style.webkitMaskPosition = '';
+      el.style.backgroundColor = '';
+      el.style.backgroundImage = `url("${url}")`;
+    }
   }
 
   _create(code, sq) {
     const el = document.createElement('div');
     el.className = 'b-piece';
-    el.style.backgroundImage = `url("${this._pieceUrl(code)}")`;
+    this._applyPieceStyle(el, code);
     this.piecesEl.appendChild(el);
     return { el, code, sq };
   }
@@ -153,7 +173,7 @@ export class Board {
   }
 
   _renderPieces(animate) {
-    for (const piece of this.pieceEls) piece.el.style.backgroundImage = `url("${this._pieceUrl(piece.code)}")`;
+    for (const piece of this.pieceEls) this._applyPieceStyle(piece.el, piece.code);
     const target = this.chess.pieces().map((p) => ({ sq: p.square, code: p.color + p.type }));
     const old = this.pieceEls;
     const used = new Set();
@@ -425,7 +445,7 @@ export class Board {
       b.className = 'promo-btn';
       b.style.left = `${x * 12.5}%`;
       b.style.top = `${(down ? i : 7 - i) * 12.5}%`;
-      b.style.backgroundImage = `url("${this._pieceUrl(color + t)}")`;
+      this._applyPieceStyle(b, color + t);
       b.setAttribute('aria-label', { q: 'Ферзь', n: 'Конь', r: 'Ладья', b: 'Слон' }[t]);
       b.addEventListener('pointerdown', (e) => { e.stopPropagation(); this._closePromo(); done(t); });
       this.promoEl.appendChild(b);
