@@ -1,4 +1,5 @@
 import { settings } from './store.js';
+import { pieceFolder } from './piece-skins.js';
 // Доска: фигуры с анимацией, ходы тапом и перетаскиванием, подсветки, стрелки, значки силы хода.
 // Доска не меняет партию сама: сообщает о ходе через onMove, хозяин партии вызывает setPosition.
 
@@ -125,8 +126,7 @@ export class Board {
   }
 
   _pieceUrl(code) {
-    const skin = settings.get().pieceSkin;
-    const folder = ['ivory', 'marble', 'royal', 'copper', 'ocean'].includes(skin) ? skin + '/' : '';
+    const folder = pieceFolder(settings.get().pieceSkin);
     return `${this.pieceBase}${folder}${code[0]}${code[1].toUpperCase()}.svg`;
   }
 
