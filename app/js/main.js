@@ -3,6 +3,7 @@ import { settings, puzzles, resetAll, profile as profileStore } from './store.js
 import { THEMES, isThemeUnlocked, achievementById } from './progress.js';
 import { setSoundEnabled, playSound } from './sound.js';
 import { h, append, icon, openSheet, segmented, switchEl, confirmSheet, getEngine, toast, applyTheme } from './ui.js';
+import { PIECE_SKINS, pieceSkinUrl } from './piece-skins.js';
 import { mountPlay } from './screens/play.js';
 import { mountOnline } from './screens/online.js';
 import { mountAnalysis } from './screens/analysis.js';
@@ -88,6 +89,27 @@ function settingsSheet() {
       }
     };
     drawSw(s.theme);
+    const pieceGrid = h('div', { class: 'piece-skin-grid' });
+    const drawPieces = (selected) => {
+      pieceGrid.innerHTML = '';
+      for (const skin of PIECE_SKINS) {
+        pieceGrid.append(h('button', {
+          class: 'piece-skin-card' + (selected === skin.id ? ' on' : ''),
+          'aria-label': `Фигуры «${skin.name}», лицензия ${skin.license}`,
+          onclick: () => {
+            settings.set({ pieceSkin: skin.id });
+            drawPieces(skin.id);
+            current?.refresh?.();
+          },
+        },
+        h('span', { class: 'piece-skin-preview' },
+          h('img', { src: pieceSkinUrl(skin.id, 'wN'), alt: '' }),
+          h('img', { src: pieceSkinUrl(skin.id, 'bK'), alt: '' })),
+        h('span', { class: 'piece-skin-name' }, skin.name),
+        h('small', {}, skin.license)));
+      }
+    };
+    drawPieces(PIECE_SKINS.some((x) => x.id === s.pieceSkin) ? s.pieceSkin : 'classic');
     append(sheet,
       h('h2', {}, 'Настройки'),
       h('div', {}, h('div', { class: 'label' }, 'Запись ходов'), segmented([['en', 'Nf3 (англ.)'], ['ru', 'Кf3 (рус.)']], s.notation, (v) => { settings.set({ notation: v }); current?.refresh?.(); })),
@@ -96,7 +118,10 @@ function settingsSheet() {
         segmented([['auto', 'Авто'], ['slow', 'Медл.'], ['normal', 'Обычн.'], ['fast', 'Быстро'], ['off', 'Нет']], s.animation, (v) => { settings.set({ animation: v }); current?.refresh?.(); }),
         h('div', { class: 'muted small', style: { marginTop: '6px' } }, 'Авто: в пуле мгновенно, в блице быстро, в рапиде и без часов — плавно.')),
       h('div', {}, h('div', { class: 'label' }, 'Доска · новые стили открываются наградами'), sw),
-      h('div', {}, h('div', { class: 'label' }, 'Фигуры'), segmented([['classic', 'Классика'], ['ivory', 'Слоновая кость'], ['marble', 'Мрамор']], ['classic', 'ivory', 'marble'].includes(s.pieceSkin) ? s.pieceSkin : '', v => { settings.set({ pieceSkin: v }); current?.refresh?.(); close(); settingsSheet(); }), segmented([['royal', 'Королевские'], ['copper', 'Медь'], ['ocean', 'Океан']], s.pieceSkin, v => { settings.set({ pieceSkin: v }); current?.refresh?.(); close(); settingsSheet(); })),
+      h('div', {},
+        h('div', { class: 'label' }, 'Фигуры · только свободно лицензированные наборы'),
+        pieceGrid,
+        h('div', { class: 'muted small', style: { marginTop: '7px' } }, 'Авторы и лицензии: THIRD_PARTY_NOTICES.md')),
       h('div', { class: 'toggle-row' }, h('span', {}, 'Звуки'), switchEl(s.sound, (v) => { settings.set({ sound: v }); applySettings(); if (v) playSound('move'); })),
       h('div', { class: 'toggle-row' }, h('span', {}, 'Координаты на доске'), switchEl(s.coords, (v) => { settings.set({ coords: v }); current?.refresh?.(); })),
       h('button', {
@@ -112,7 +137,7 @@ function settingsSheet() {
       }, 'Удалить все данные'),
       h('div', { class: 'about' },
         'Движок: Stockfish 18 (stockfish.js, GPL-3.0) — работает прямо на телефоне, без сервера. ',
-        'Фигуры: cburnett (GPLv2+). Значки ходов нарисованы для этого приложения. Код приложения: GPL-3.0. ',
+        'Фигуры: 17 свободно лицензированных наборов; авторы и лицензии — THIRD_PARTY_NOTICES.md. Значки ходов нарисованы для этого приложения. Код приложения: GPL-3.0. ',
         'Партии, рейтинг и заметки хранятся только на этом устройстве.'),
       h('button', { class: 'btn btn-block', onclick: close }, 'Готово'),
     );
