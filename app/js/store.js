@@ -21,6 +21,9 @@ export const DEFAULT_SETTINGS = {
   level: 2,
   playColor: 'w',
   myColor: 'w',
+  importSource: 'lichess',
+  importUsername: '',
+  importFavorites: [],
   animation: 'auto', // auto | slow | normal | fast | off
   timeControl: '5+0',
   rated: true,
