@@ -3,6 +3,7 @@
 // Движок и фигуры не меняются: сначала кэш, чтобы 7 МБ не качались каждый раз.
 const CACHE = 'chess-v19';
 const LICHESS_PIECE_PREFIX = 'https://raw.githubusercontent.com/lichess-org/lila/9ab61b48688f55f61c050b64322707a8c6f88f41/public/piece/';
+const PIECE_CACHE = 'chess-piece-skins-9ab61b4';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/main.js', 'js/piece-skins.js', 'js/online-config.js', 'js/online-profile.js', 'js/screens/online.js', 'js/ui.js', 'js/board.js', 'js/chess.js', 'js/pgn.js', 'js/engine.js', 'js/review.js',
@@ -22,7 +23,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== CACHE && k !== PIECE_CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
     // Движок докачиваем в фоне, чтобы он был доступен офлайн.
     const c = await caches.open(CACHE);
@@ -39,7 +40,7 @@ self.addEventListener('fetch', (e) => {
   // После первого запроса выбранного набора держим SVG в PWA-кэше для офлайна.
   if (req.url.startsWith(LICHESS_PIECE_PREFIX)) {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+      if (res.ok) { const copy = res.clone(); caches.open(PIECE_CACHE).then((c) => c.put(req, copy)); }
       return res;
     })));
     return;
