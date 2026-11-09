@@ -946,3 +946,108 @@ html, body, #app { touch-action: manipulation; }
   padding: 5px 8px;
   font-size: 13.5px;
 }
+
+
+/* ---------- Импорт партий по нику ---------- */
+.import-player-search {
+  display: grid;
+  grid-template-columns: minmax(104px, .34fr) minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: stretch;
+}
+.import-player-search select,
+.import-player-search input { min-width: 0; }
+.import-favorite-toggle {
+  min-width: 44px;
+  padding: 0;
+  font-size: 20px;
+}
+.import-favorite-toggle.on { color: #f0c15c; }
+.import-favorites {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.import-favorites::-webkit-scrollbar { display: none; }
+.import-favorite-chip {
+  flex: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.import-favorite-chip span { color: #f0c15c; margin-right: 4px; }
+.import-results { display: grid; gap: 8px; }
+.import-game-card {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 10px 11px;
+  text-align: left;
+}
+.import-game-card:active { transform: scale(.992); }
+.import-game-match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+.import-player {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+.import-player.right { text-align: right; }
+.import-player b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.import-player small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
+}
+.import-player.right small { text-align: right; }
+.import-player em {
+  justify-self: end;
+  border-radius: 999px;
+  background: rgba(129, 182, 76, .16);
+  color: var(--accent);
+  padding: 2px 5px;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.import-player.right em { justify-self: start; grid-column: 1; grid-row: 1; }
+.import-player.right b { grid-column: 2; grid-row: 1; }
+.import-vs {
+  text-align: center;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.import-score {
+  min-width: 38px;
+  text-align: right;
+  font-size: 14px;
+}
+@media (max-width: 390px) {
+  .import-game-match { grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); }
+  .import-score { grid-column: 1 / -1; text-align: center; }
+}
