@@ -602,10 +602,10 @@ export function mountAnalysis(root, { go, params = {} }) {
 
     // Карточка объяснения меняет высоту от хода к ходу. Пока доска видна,
     // держим её на том же месте экрана, а не сохраняем голый scrollY.
-    if (anchorBoard && board.root.isConnected) {
+    if (!root.classList.contains('desktop-layout') && anchorBoard && board.root.isConnected) {
       const shift = board.root.getBoundingClientRect().top - oldBoardRect.top;
       if (Math.abs(shift) > 0.5) window.scrollBy(0, shift);
-    } else {
+    } else if (!root.classList.contains('desktop-layout')) {
       window.scrollTo(0, keepY);
     }
     const curChip = root.querySelector('.mchip.cur');
