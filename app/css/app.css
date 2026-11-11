@@ -1051,3 +1051,36 @@ html, body, #app { touch-action: manipulation; }
   .import-game-match { grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); }
   .import-score { grid-column: 1 / -1; text-align: center; }
 }
+
+/* Компьютер: большая доска слева, независимая панель ходов справа. */
+@media (min-width: 1100px) {
+  #app { max-width: 1280px; }
+  main#view:not(.desktop-layout) { width: 100%; max-width: 800px; margin-inline: auto; }
+  main#view.desktop-layout, body.game-active main#view.desktop-layout { display: grid; width: 100%; grid-template-columns: minmax(0, var(--desktop-stage-width, 600px)) minmax(0, var(--desktop-side-width, 360px)); grid-template-rows: auto; gap: 24px; justify-content: center; align-items: start; align-content: start; padding: 14px 20px 84px; position: relative; }
+  .desktop-stage { display: flex; flex-direction: column; min-width: 0; gap: 8px; }
+  .desktop-stage > .board-wrap, .desktop-stage > .board-wrap.full { width: 100%; min-width: 0; margin: 0; align-self: stretch; }
+  .desktop-stage > .board-wrap .board { width: var(--desktop-board-size); height: var(--desktop-board-size); flex: 0 0 var(--desktop-board-size); border-radius: 8px; }
+  .desktop-stage > .board-wrap .evalbar { width: 12px; flex: 0 0 12px; }
+  .desktop-stage > .player { min-height: 44px; }
+  .desktop-stage > .nav { margin: 0; }
+  .desktop-sidebar { display: flex; flex-direction: column; gap: 12px; min-height: 0; min-width: 0; height: var(--desktop-panel-height); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 1px 4px 4px 1px; }
+  .desktop-sidebar > * { flex-shrink: 0; min-width: 0; }
+  .desktop-panel-heading { margin: 0; padding: 2px 4px; font-size: 18px; font-weight: 750; letter-spacing: -.025em; }
+  .desktop-sidebar > .history-bar { position: static; width: 100%; height: auto; max-height: none; min-height: 180px; flex: 1 1 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) 44px; gap: 8px; align-items: stretch; background: var(--surface); border: 1px solid var(--line); padding: 10px; border-radius: 14px; }
+  .desktop-sidebar > .history-bar .moves-strip { grid-column: 1 / -1; grid-row: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+  .desktop-sidebar > .history-bar .history-arrow { grid-row: 2; width: 100%; }
+  .desktop-sidebar > .moves-strip { position: static; width: 100%; height: auto; min-height: 100px; max-height: 260px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px; }
+  .desktop-sidebar .mchip { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  .desktop-sidebar .actions { gap: 6px; }
+  .desktop-sidebar .action { min-height: 52px; font-size: 11px; }
+  .desktop-sidebar .analysis-coach-card { margin: 0; }
+  .tabbar, body.game-active:not(.show-game-navigation) .tabbar { display: flex; left: 50%; right: auto; bottom: 12px; transform: translateX(-50%); width: min(760px, calc(100vw - 48px)); border: 1px solid var(--line); border-radius: 18px; padding: 0; box-shadow: 0 8px 30px rgba(0,0,0,.3); overflow: hidden; }
+  .tabbar-inner { max-width: none; }
+  .tab { height: 58px; }
+  body.game-active .game-navigation-toggle { display: none; }
+}
+
+@media (min-width: 1100px) {
+  main#view.desktop-layout > .desktop-stage { grid-column: 1; grid-row: 1; }
+  main#view.desktop-layout > .desktop-sidebar { grid-column: 2; grid-row: 1; }
+}

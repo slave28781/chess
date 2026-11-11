@@ -3,6 +3,7 @@ import { settings, puzzles, resetAll, profile as profileStore } from './store.js
 import { THEMES, isThemeUnlocked, achievementById } from './progress.js';
 import { setSoundEnabled, playSound } from './sound.js';
 import { h, append, icon, openSheet, segmented, switchEl, confirmSheet, getEngine, toast, applyTheme } from './ui.js';
+import { mountDesktopLayout } from './desktop-layout.js';
 import { mountPlay } from './screens/play.js';
 import { mountOnline } from './screens/online.js';
 import { mountAnalysis } from './screens/analysis.js';
@@ -27,6 +28,7 @@ document.body.append(gameNavigation);
 const ratingBtn = h('button', { class: 'rating-badge', 'aria-label': 'Ваш рейтинг', onclick: () => go('profile') });
 let current = null;
 let currentTab = null;
+let desktopLayout = null;
 
 function applySettings() {
   const s = settings.get();
@@ -59,6 +61,7 @@ function renderTabs() {
 
 export function go(tab, params = {}) {
   const entry = TABS.find((t) => t[0] === tab) || TABS[0];
+  desktopLayout?.destroy(); desktopLayout = null;
   if (current) current.destroy();
   currentTab = entry[0];
   view.dataset.screen = currentTab;
@@ -69,6 +72,7 @@ export function go(tab, params = {}) {
   current = entry[2](view, { go, params });
   if (location.hash !== '#' + currentTab) history.replaceState(null, '', '#' + currentTab);
   renderTabs();
+  desktopLayout = mountDesktopLayout(view);
 }
 
 function settingsSheet() {
